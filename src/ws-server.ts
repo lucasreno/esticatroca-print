@@ -174,7 +174,7 @@ function pickPrinter(raw: unknown): PrinterConfig | undefined {
 
 /**
  * Resolves one or more printers for a message. Mirrors the legacy
- * php-pos-print fallback cascade:
+ * Printer resolution fallback cascade:
  *   1. data.printer explicit -> that printer
  *   2. data.order present and no explicit printer -> all order_printers
  *   3. otherwise -> receipt_printer

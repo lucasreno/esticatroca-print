@@ -169,28 +169,14 @@ Restart-Service "Esticatroca Print"
 
 ---
 
-## 10. Migra&ccedil;&atilde;o do `php-pos-print`
-
-1. Copie `C:\php-pos-print\database\data.json` para referenciar os nomes de impressoras cadastrados.
-2. Na nova UI, cadastre cada impressora — **importante**: no campo `path`, use o **nome Windows** da impressora (sem `smb://` e sem `\\HOST\`), por exemplo `Bematech MP-100S TH`.
-3. Pare o servi&ccedil;o PHP:
-   ```powershell
-   Get-Process php | Stop-Process -Force
-   ```
-   E remova do Agendador de Tarefas / Start-up se estiver l&aacute;.
-4. Teste o fluxo no frontend (impress&atilde;o de volumes e conclus&atilde;o de avalia&ccedil;&atilde;o).
-5. Ap&oacute;s 1-2 dias de opera&ccedil;&atilde;o est&aacute;vel, o reposit&oacute;rio `php-pos-print` pode ser arquivado.
-
----
-
-## 11. Solu&ccedil;&atilde;o de problemas
+## 10. Solu&ccedil;&atilde;o de problemas
 
 | Sintoma | Causa prov&aacute;vel | A&ccedil;&atilde;o |
 |---|---|---|
 | `npm ci` falha em `@grandchef/node-printer` | Build tools faltando | Instale VS Build Tools (se&ccedil;&atilde;o 1.3) |
 | UI abre mas impressora n&atilde;o aparece | Driver n&atilde;o instalado | Instale driver e reinicie o servi&ccedil;o |
 | `Timeout de 15000ms excedido` | Impressora offline/sem papel | Verifique impressora; clique "Reiniciar Spooler" |
-| `EADDRINUSE :6441` | `php-pos-print` ainda rodando | Encerre `server.php` |
+| `EADDRINUSE :6441` | Outro processo usando a porta | Identifique e encerre o processo concorrente |
 | Sem som de impress&atilde;o em cen&aacute;rios antigos | Frontend enviando `type` desconhecido | Ver log; novo tipo precisa ser implementado em `ws-server.ts` |
 
 ---

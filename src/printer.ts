@@ -129,7 +129,7 @@ export async function printTestPage(cfg: PrinterConfig): Promise<void> {
 }
 
 /**
- * Prints a receipt matching the legacy php-pos-print "print-receipt" payload
+ * Prints a receipt matching the "print-receipt" payload
  * (compat with `esticatroca-web/src/app/services/impressao.service.ts`).
  */
 export async function printReceipt(cfg: PrinterConfig, data: ReceiptPayload): Promise<void> {

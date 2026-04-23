@@ -2,7 +2,7 @@
   "name": "esticatroca-print",
   "version": "0.1.0",
   "private": true,
-  "description": "Servico local de impressao ESC/POS para o ecossistema Esticatroca (Windows service + WebSocket compativel com php-pos-print).",
+  "description": "Servico local de impressao ESC/POS para o ecossistema Esticatroca (Windows service + WebSocket).",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",

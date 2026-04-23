@@ -1,17 +1,17 @@
 # Esticatroca Print
 
-Servi&ccedil;o local de impress&atilde;o ESC/POS para o ecossistema **Esticatroca**. Substitui o legado [`php-pos-print`](../php-pos-print/) mantendo **100% de compatibilidade** com o contrato WebSocket consumido por [`esticatroca-web`](../esticatroca-web/src/app/services/impressao.service.ts).
+Servi&ccedil;o local de impress&atilde;o ESC/POS para o ecossistema **Esticatroca**. Exp&otilde;e um WebSocket consumido por [`esticatroca-web`](../esticatroca-web/src/app/services/impressao.service.ts).
 
-- **WebSocket** em `ws://localhost:6441` — mesmos `type`s do legado (`check-status`, `open-cashdrawer`, `print-img`, `print-data`, `print-receipt`).
+- **WebSocket** em `ws://localhost:6441` (`type`s: `check-status`, `open-cashdrawer`, `print-img`, `print-data`, `print-receipt`).
 - **Admin UI** moderna em `http://localhost:6442`.
 - Node.js 20+ em TypeScript. Instalado como **servi&ccedil;o do Windows** com auto-restart.
 - Fila serial por impressora, timeout por job, logs rotativos, recupera&ccedil;&atilde;o do Print Spooler com um clique.
 
-> Motiva&ccedil;&atilde;o e compara&ccedil;&atilde;o com o `php-pos-print` est&atilde;o em [../progress.txt](../progress.txt) e no [AGENTS.md](AGENTS.md).
+> Motiva&ccedil;&atilde;o e hist&oacute;rico est&atilde;o em [../progress.txt](../progress.txt) e no [AGENTS.md](AGENTS.md).
 
 ## Por que existe
 
-O servi&ccedil;o anterior (`php-pos-print`) apresentava falhas recorrentes que s&oacute; eram resolvidas reiniciando o PC. Causas identificadas:
+O servi&ccedil;o anterior (em PHP) apresentava falhas recorrentes que s&oacute; eram resolvidas reiniciando o PC. Causas identificadas:
 
 1. Depend&ecirc;ncia de compartilhamento **SMB** (`smb://HOST/PRINTER`) — sess&otilde;es expiram sem reautentica&ccedil;&atilde;o.
 2. Ausencia de supervisor: `server.php` n&atilde;o tinha auto-restart em crash.
@@ -101,7 +101,7 @@ Base: `http://localhost:6442`
 esticatroca-print/
 ├── src/
 │   ├── server.ts          # entry point (WS + HTTP)
-│   ├── ws-server.ts       # WebSocket compativel com php-pos-print
+│   ├── ws-server.ts       # WebSocket ESC/POS
 │   ├── admin.ts           # Fastify + API REST
 │   ├── printer.ts         # camada ESC/POS (node-thermal-printer)
 │   ├── queue.ts           # fila serial por impressora

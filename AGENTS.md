@@ -9,7 +9,7 @@ Servi&ccedil;o **local** em Node.js que roda na esta&ccedil;&atilde;o Windows da
 - **WebSocket** em `ws://localhost:6441` consumido por [../esticatroca-web/src/app/services/impressao.service.ts](../esticatroca-web/src/app/services/impressao.service.ts).
 - **HTTP admin** em `http://localhost:6442` com UI para cadastro/teste/diagnostico de impressoras.
 
-Substitui o legado [`../php-pos-print/`](../php-pos-print/), mantendo o **mesmo contrato WebSocket** (tipos `check-status`, `open-cashdrawer`, `print-img`, `print-data`, `print-receipt`) para n&atilde;o exigir mudan&ccedil;a no frontend.
+Exp&otilde;e o **contrato WebSocket** consumido pelo frontend (tipos `check-status`, `open-cashdrawer`, `print-img`, `print-data`, `print-receipt`).
 
 **N&atilde;o** conversa com [../esticatroca-api/](../esticatroca-api/). N&atilde;o autentica — &eacute; puramente local.
 
@@ -23,7 +23,7 @@ Substitui o legado [`../php-pos-print/`](../php-pos-print/), mantendo o **mesmo 
 - [`node-windows`](https://github.com/coreybutler/node-windows) — instala como servi&ccedil;o Windows com auto-restart.
 - [`pino`](https://getpino.io/) + [`pino-roll`](https://github.com/mcollina/pino-roll) — logs estruturados com rota&ccedil;&atilde;o di&aacute;ria.
 - [`zod`](https://zod.dev/) — valida&ccedil;&atilde;o de payloads da API admin.
-- Persist&ecirc;ncia: JSON em `data/data.json` (shape equivalente ao `php-pos-print/database/data.json`).
+- Persist&ecirc;ncia: JSON em `data/data.json`.
 
 ## 3. Estrutura
 
