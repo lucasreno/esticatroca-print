@@ -29,7 +29,12 @@ Usamos **SemVer** no `package.json`:
 | Nova funcionalidade, mensagem WS nova, mudança de UI admin | MINOR (`0.1.2` → `0.2.0`) |
 | Mudança de contrato WS que quebra frontend antigo, mudança no formato de `data.json`, troca do gerenciador de serviço | MAJOR (`0.2.0` → `1.0.0`) |
 
-A tag git **sempre** usa o prefixo `print-v` para não colidir com tags dos outros repos do poli-repo (`api-v*`, `web-v*`).
+A tag git pode usar:
+
+- **`print-vX.Y.Z`** &mdash; convenc&atilde;o do poli-repo (raiz `esticatroca/`), evita colis&atilde;o com tags de `esticatroca-api` e `esticatroca-web`.
+- **`vX.Y.Z`** &mdash; tamb&eacute;m aceita pelo workflow; conveni&ecirc;ncia em repo standalone (`lucasreno/esticatroca-print`).
+
+O workflow aceita os dois formatos, ent&atilde;o use o que for mais natural no contexto.
 
 ---
 

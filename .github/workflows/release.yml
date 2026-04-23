@@ -3,9 +3,10 @@ name: Release (esticatroca-print)
 on:
   push:
     tags:
-      # Use prefixo para nao colidir com tags de esticatroca-api / esticatroca-web
-      # no poli-repo. Ex.: git tag print-v0.2.0 && git push origin print-v0.2.0
+      # Prefixo `print-v*` é usado no poli-repo (raiz esticatroca/) para nao
+      # colidir com api-v*/web-v*. Em repo standalone, `v*` também funciona.
       - 'print-v*'
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -20,9 +21,6 @@ jobs:
   build:
     name: Build portable zip (win-x64)
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: esticatroca-print
 
     steps:
       - name: Checkout
@@ -33,7 +31,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: esticatroca-print/package-lock.json
 
       - name: Resolve version
         id: version
@@ -43,6 +40,8 @@ jobs:
           $dispatch = '${{ github.event.inputs.version }}'
           if ($ref -like 'refs/tags/print-v*') {
             $v = $ref -replace '^refs/tags/print-v',''
+          } elseif ($ref -like 'refs/tags/v*') {
+            $v = $ref -replace '^refs/tags/v',''
           } elseif ($dispatch) {
             $v = $dispatch
           } else {
@@ -78,12 +77,12 @@ jobs:
         with:
           name: esticatroca-print-win-x64
           path: |
-            esticatroca-print/dist-release/*.zip
-            esticatroca-print/dist-release/*.sha256
+            dist-release/*.zip
+            dist-release/*.sha256
           retention-days: 30
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/print-v')
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -92,8 +91,8 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            esticatroca-print/dist-release/*.zip
-            esticatroca-print/dist-release/*.sha256
+            dist-release/*.zip
+            dist-release/*.sha256
           body: |
             Pacote portatil para Windows x64.
 
