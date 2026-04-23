@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "service:install": "node dist/scripts/install-service.js",
     "service:uninstall": "node dist/scripts/uninstall-service.js",
+    "pack:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack-release.ps1",
     "lint": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit"
   },
   "engines": {

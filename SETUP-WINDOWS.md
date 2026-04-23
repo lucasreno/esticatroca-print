@@ -6,6 +6,55 @@ Roteiro passo-a-passo para instalar o **Esticatroca Print** em uma esta&ccedil;&
 
 ---
 
+## 0. Instala&ccedil;&atilde;o r&aacute;pida (recomendado) &mdash; zip port&aacute;til
+
+Se voc&ecirc; recebeu (ou gerou) o arquivo `esticatroca-print-vX.Y.Z-win-x64.zip`, **n&atilde;o precisa instalar Node, nem compilar nada, nem usar Git**. Ele j&aacute; cont&eacute;m Node 20 port&aacute;til, as depend&ecirc;ncias nativas pr&eacute;-compiladas, o `dist\` e o `nssm.exe`.
+
+Fluxo completo (tempo estimado: &lt; 3 min):
+
+1. Extraia o zip em `C:\esticatroca-print\`.
+2. Clique com o bot&atilde;o direito em `install.bat` &rarr; **&ldquo;Executar como administrador&rdquo;**.
+3. Abra `http://localhost:6442/` para cadastrar a impressora e definir a padr&atilde;o.
+
+Pronto. O servi&ccedil;o **EsticatrocaPrint** fica registrado, inicia com o Windows e reinicia automaticamente se cair.
+
+**Atualiza&ccedil;&atilde;o:** extraia o zip novo por cima (preservando `data\` e `logos\`) e clique com o bot&atilde;o direito em `update.bat` &rarr; &ldquo;Executar como administrador&rdquo;.
+
+**Desinstala&ccedil;&atilde;o:** `uninstall.bat` como administrador.
+
+### 0.1 De onde baixar o zip
+
+- **Release mais recente (URL est&aacute;vel):**
+  `https://github.com/<owner>/<repo>/releases/latest/download/esticatroca-print-win-x64.zip`
+- **Vers&atilde;o espec&iacute;fica:** https://github.com/&lt;owner&gt;/&lt;repo&gt;/releases
+- Checksum SHA-256 (opcional): baixe tamb&eacute;m o arquivo `.sha256` correspondente e valide com `Get-FileHash`.
+
+Substitua `<owner>/<repo>` pela URL real do reposit&oacute;rio. A primeira URL redireciona automaticamente para a tag mais nova de `print-v*`.
+
+### 0.2 Como gerar um novo release
+
+**Automatizado (GitHub Actions):**
+
+```powershell
+# Atualize a versao no package.json, commit e empurre uma tag:
+git -C esticatroca-print tag print-v0.2.0
+git -C esticatroca-print push origin print-v0.2.0
+```
+
+O workflow `.github/workflows/release.yml` compila no runner `windows-latest`, empacota o zip e publica automaticamente em **Releases**. Tamb&eacute;m pode ser disparado manualmente em *Actions &rarr; Release (esticatroca-print) &rarr; Run workflow*.
+
+**Local (m&aacute;quina do time, com Node + VS Build Tools):**
+
+```powershell
+cd C:\caminho\para\esticatroca-print
+npm run pack:release
+# saida: dist-release\esticatroca-print-vX.Y.Z-win-x64.zip
+```
+
+Se a instala&ccedil;&atilde;o r&aacute;pida atender, pule direto para a se&ccedil;&atilde;o **7. Liberar o firewall** (se aplic&aacute;vel) e **9. Rotinas operacionais**. As se&ccedil;&otilde;es 1&ndash;6 abaixo descrevem a instala&ccedil;&atilde;o manual &mdash; &uacute;til para desenvolvedores ou m&aacute;quinas sem o zip.
+
+---
+
 ## 1. Pr&eacute;-requisitos
 
 ### 1.1 Windows

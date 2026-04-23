@@ -1,0 +1,109 @@
+name: Release (esticatroca-print)
+
+on:
+  push:
+    tags:
+      # Use prefixo para nao colidir com tags de esticatroca-api / esticatroca-web
+      # no poli-repo. Ex.: git tag print-v0.2.0 && git push origin print-v0.2.0
+      - 'print-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versao (ex.: 0.2.0). Se vazio, usa a do package.json.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write  # necessario para criar o Release
+
+jobs:
+  build:
+    name: Build portable zip (win-x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: esticatroca-print
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: esticatroca-print/package-lock.json
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $ref = '${{ github.ref }}'
+          $dispatch = '${{ github.event.inputs.version }}'
+          if ($ref -like 'refs/tags/print-v*') {
+            $v = $ref -replace '^refs/tags/print-v',''
+          } elseif ($dispatch) {
+            $v = $dispatch
+          } else {
+            $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+            $v = $pkg.version
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Resolved version: $v"
+
+      - name: Install dev deps (for TS build)
+        run: npm ci --no-audit --no-fund
+
+      - name: Pack release
+        shell: pwsh
+        run: npm run pack:release
+
+      - name: Compute SHA256
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem dist-release\esticatroca-print-*-win-x64.zip | Select-Object -First 1
+          if (-not $zip) { throw 'zip nao encontrado' }
+          $hash = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash.ToLower()
+          "$hash  $($zip.Name)" | Out-File -FilePath "$($zip.FullName).sha256" -Encoding ascii
+          Write-Host "SHA256: $hash"
+
+          # Copia com nome estavel (sem versao) para URL de "latest".
+          $stable = Join-Path $zip.Directory.FullName 'esticatroca-print-win-x64.zip'
+          Copy-Item -Force $zip.FullName $stable
+          "$hash  esticatroca-print-win-x64.zip" | Out-File -FilePath "$stable.sha256" -Encoding ascii
+
+      - name: Upload build artifact (para download via Actions mesmo sem release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: esticatroca-print-win-x64
+          path: |
+            esticatroca-print/dist-release/*.zip
+            esticatroca-print/dist-release/*.sha256
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/print-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: esticatroca-print v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            esticatroca-print/dist-release/*.zip
+            esticatroca-print/dist-release/*.sha256
+          body: |
+            Pacote portatil para Windows x64.
+
+            ## Instalacao rapida
+            1. Baixe `esticatroca-print-v${{ steps.version.outputs.version }}-win-x64.zip` abaixo.
+            2. Extraia em `C:\esticatroca-print\`.
+            3. Clique com o botao direito em `install.bat` -> "Executar como administrador".
+            4. Abra http://localhost:6442/ para cadastrar a impressora.
+
+            Tamanho ~40 MB (inclui Node 20 portable, node_modules pre-compilados e NSSM).
+            Veja `README.txt` dentro do zip ou `SETUP-WINDOWS.md` no repo para detalhes.
+
+            **Checksum:** o arquivo `.sha256` contem o hash SHA-256 do zip.
