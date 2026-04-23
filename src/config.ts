@@ -37,6 +37,8 @@ export const ALLOWED_ORIGINS = new Set<string>([
   'http://127.0.0.1:4200',
   'http://localhost',
   'http://127.0.0.1',
+  `http://localhost:${HTTP_PORT}`,
+  `http://127.0.0.1:${HTTP_PORT}`,
   ...RAW_ALLOWED_ORIGINS,
 ]);
 export const ALLOW_NO_ORIGIN =
