@@ -26,6 +26,25 @@ function loadPrinterLib(): any {
   }
 }
 
+// Driver nativo do spooler do Windows (consumido pelo interface `printer:<Nome>`
+// do node-thermal-printer). Carregado lazy para nao derrubar o servico em
+// plataformas sem o modulo nativo compilado.
+let windowsPrinterDriver: any = null;
+function loadWindowsPrinterDriver(): any {
+  if (windowsPrinterDriver) return windowsPrinterDriver;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    windowsPrinterDriver = require('@grandchef/node-printer');
+    return windowsPrinterDriver;
+  } catch (err) {
+    logger.error({ err: (err as Error).message }, '@grandchef/node-printer indisponivel');
+    throw new Error(
+      '@grandchef/node-printer nao carregou. Rode `npm install` no diretorio do servico ' +
+        'e verifique se as build tools estao instaladas para compilar o binding nativo.',
+    );
+  }
+}
+
 export interface ReceiptPayload {
   logo?: string;
   heading?: string;
@@ -100,6 +119,9 @@ function buildPrinter(cfg: PrinterConfig) {
     removeSpecialCharacters: false,
     lineCharacter: '-',
     width: cfg.char_per_line ?? DEFAULT_CHAR_PER_LINE,
+    // O interface `printer:<Nome>` (Windows/local) exige a injecao do driver
+    // nativo — senao o construtor dispara "No driver set!".
+    driver: cfg.type === 'windows' ? loadWindowsPrinterDriver() : undefined,
     options: { timeout: cfg.timeout_ms ?? JOB_TIMEOUT_MS },
   });
   return p;
