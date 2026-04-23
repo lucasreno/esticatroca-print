@@ -43,6 +43,12 @@ npm run service:install     # uma vez, como admin
 
 Acesse `http://localhost:6442/` para configurar impressoras.
 
+> **Nota sobre `@mapbox/node-pre-gyp`**: o pacote `@grandchef/node-printer` precisa do `@mapbox/node-pre-gyp` em runtime para carregar o binding nativo, mas ele n&atilde;o est&aacute; declarado como depend&ecirc;ncia direta dele. Por isso o `package.json` deste reposit&oacute;rio lista `@mapbox/node-pre-gyp` explicitamente. Se voc&ecirc; ver `Cannot find module '@mapbox/node-pre-gyp'` ao testar impressora, rode:
+>
+> ```powershell
+> npm install @mapbox/node-pre-gyp --save
+> ```
+
 ## Desenvolvimento
 
 ```powershell

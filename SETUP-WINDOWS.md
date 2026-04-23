@@ -60,6 +60,20 @@ npm run build
 - `npm ci` instala exatamente o `package-lock.json`.
 - `npm run build` gera `dist/` a partir de `src/`.
 
+> **Atenção — `@mapbox/node-pre-gyp`**: o `@grandchef/node-printer` (binding nativo do spooler do Windows) faz `require('@mapbox/node-pre-gyp')` em runtime, mas **não** declara esse pacote como dependência própria. O `package.json` deste repositório já lista `@mapbox/node-pre-gyp` explicitamente para cobrir esse buraco. Se você ainda assim ver, ao testar impressão, o erro:
+>
+> ```
+> Cannot find module '@mapbox/node-pre-gyp'
+> ```
+>
+> execute **na pasta do serviço** (aquela onde está o `package.json` — tipicamente `C:\esticatroca-print`):
+>
+> ```powershell
+> npm install @mapbox/node-pre-gyp --save
+> npm run build
+> Restart-Service "Esticatroca Print"   # se já estiver instalado como serviço
+> ```
+
 ---
 
 ## 4. Primeiro start (modo teste, sem servi&ccedil;o)
@@ -174,6 +188,7 @@ Restart-Service "Esticatroca Print"
 | Sintoma | Causa prov&aacute;vel | A&ccedil;&atilde;o |
 |---|---|---|
 | `npm ci` falha em `@grandchef/node-printer` | Build tools faltando | Instale VS Build Tools (se&ccedil;&atilde;o 1.3) |
+| `Cannot find module '@mapbox/node-pre-gyp'` ao testar impress&atilde;o | Peer dep oculta do `@grandchef/node-printer` n&atilde;o instalada | `npm install @mapbox/node-pre-gyp --save` na pasta do servi&ccedil;o + `npm run build` |
 | UI abre mas impressora n&atilde;o aparece | Driver n&atilde;o instalado | Instale driver e reinicie o servi&ccedil;o |
 | `Timeout de 15000ms excedido` | Impressora offline/sem papel | Verifique impressora; clique "Reiniciar Spooler" |
 | `EADDRINUSE :6441` | Outro processo usando a porta | Identifique e encerre o processo concorrente |

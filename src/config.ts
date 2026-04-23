@@ -39,6 +39,8 @@ export const ALLOWED_ORIGINS = new Set<string>([
   'http://127.0.0.1',
   `http://localhost:${HTTP_PORT}`,
   `http://127.0.0.1:${HTTP_PORT}`,
+  // Frontend em produção (Cloud Run).
+  'https://esticatroca-web-179035085487.us-central1.run.app',
   ...RAW_ALLOWED_ORIGINS,
 ]);
 export const ALLOW_NO_ORIGIN =

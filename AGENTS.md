@@ -19,7 +19,8 @@ Exp&otilde;e o **contrato WebSocket** consumido pelo frontend (tipos `check-stat
 - [`ws`](https://www.npmjs.com/package/ws) — servidor WebSocket.
 - [`fastify`](https://www.fastify.io/) + `@fastify/static` — HTTP admin + servir `web/`.
 - [`node-thermal-printer`](https://www.npmjs.com/package/node-thermal-printer) — comandos ESC/POS (EPSON/STAR/CUSTOM).
-- [`@grandchef/node-printer`](https://www.npmjs.com/package/@grandchef/node-printer) — bindings nativos para spooler do Windows (usado via `printer:<Name>`).
+- [`@grandchef/node-printer`](https://www.npmjs.com/package/@grandchef/node-printer) — bindings nativos para spooler do Windows (usado via `printer:<Name>`). **Requer `@mapbox/node-pre-gyp` instalado explicitamente** — o `@grandchef/node-printer` faz `require('@mapbox/node-pre-gyp')` em runtime mas n&atilde;o declara o pacote em suas pr&oacute;prias `dependencies`. O `package.json` deste repo lista `@mapbox/node-pre-gyp` para cobrir esse buraco; n&atilde;o remova.
+- **Driver precisa ser injetado no `node-thermal-printer`**: ao construir `ThermalPrinter` com `interface: 'printer:<Nome>'` (Windows local), &eacute; obrigat&oacute;rio passar `driver: require('@grandchef/node-printer')` — sen&atilde;o o construtor disparar&aacute; `No driver set!`. Isso &eacute; feito em [src/printer.ts](src/printer.ts).
 - [`node-windows`](https://github.com/coreybutler/node-windows) — instala como servi&ccedil;o Windows com auto-restart.
 - [`pino`](https://getpino.io/) + [`pino-roll`](https://github.com/mcollina/pino-roll) — logs estruturados com rota&ccedil;&atilde;o di&aacute;ria.
 - [`zod`](https://zod.dev/) — valida&ccedil;&atilde;o de payloads da API admin.
