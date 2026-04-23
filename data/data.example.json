@@ -1,0 +1,27 @@
+{
+  "printers": [
+    {
+      "id": "example-bematech",
+      "title": "Bematech MP-100S TH",
+      "type": "windows",
+      "path": "Bematech MP-100S TH",
+      "driver": "epson",
+      "profile": "default",
+      "char_per_line": 42,
+      "timeout_ms": 15000
+    },
+    {
+      "id": "example-network",
+      "title": "Impressora em rede",
+      "type": "network",
+      "ip_address": "192.168.0.50",
+      "port": 9100,
+      "driver": "epson",
+      "profile": "default",
+      "char_per_line": 48,
+      "timeout_ms": 15000
+    }
+  ],
+  "receipt_printer": "example-bematech",
+  "order_printers": ["example-bematech"]
+}

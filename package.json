@@ -1,0 +1,36 @@
+{
+  "name": "esticatroca-print",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servico local de impressao ESC/POS para o ecossistema Esticatroca (Windows service + WebSocket compativel com php-pos-print).",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "service:install": "node dist/scripts/install-service.js",
+    "service:uninstall": "node dist/scripts/uninstall-service.js",
+    "lint": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@fastify/static": "^7.0.4",
+    "@grandchef/node-printer": "^0.7.5",
+    "fastify": "^4.28.1",
+    "node-thermal-printer": "^4.4.5",
+    "node-windows": "^1.0.0-beta.8",
+    "pino": "^9.3.2",
+    "pino-roll": "^2.0.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "@types/node-windows": "^0.1.6",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Esticatroca Print — Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      }
+      .card {
+        @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+      }
+      .btn {
+        @apply inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50;
+      }
+      .btn-primary {
+        @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500;
+      }
+      .btn-secondary {
+        @apply bg-slate-100 text-slate-800 hover:bg-slate-200 focus:ring-slate-400;
+      }
+      .btn-danger {
+        @apply bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500;
+      }
+      .btn-warn {
+        @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500;
+      }
+      .chip {
+        @apply inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700;
+      }
+      .chip-ok {
+        @apply bg-emerald-100 text-emerald-800;
+      }
+      .chip-err {
+        @apply bg-rose-100 text-rose-800;
+      }
+      .field {
+        @apply flex flex-col gap-1 text-sm;
+      }
+      .field label {
+        @apply text-slate-600;
+      }
+      .field input,
+      .field select {
+        @apply rounded-md border border-slate-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
+              <path
+                d="M6 4h12v4H6V4Zm-2 6h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2v3H6v-3H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Zm14 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM8 16h8v4H8v-4Z"
+              />
+            </svg>
+          </div>
+          <div>
+            <div class="text-sm font-semibold">Esticatroca Print</div>
+            <div class="text-xs text-slate-500" id="version">carregando...</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="health-chip" class="chip">verificando...</span>
+          <button id="btn-restart-spooler" class="btn btn-warn">Reiniciar Spooler do Windows</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl space-y-8 px-6 py-8">
+      <!-- Discovery / add -->
+      <section class="card p-6">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Impressoras do Windows</h2>
+          <button id="btn-discover" class="btn btn-secondary">Atualizar lista</button>
+        </div>
+        <div id="discovery" class="grid gap-3 md:grid-cols-2"></div>
+
+        <details class="mt-6 rounded-md border border-dashed border-slate-300 p-4 text-sm">
+          <summary class="cursor-pointer font-medium">Adicionar impressora de rede (TCP/IP)</summary>
+          <form id="form-network" class="mt-4 grid gap-3 md:grid-cols-2">
+            <div class="field">
+              <label>Nome</label>
+              <input name="title" required placeholder="Bematech MP-100S TH" />
+            </div>
+            <div class="field">
+              <label>IP</label>
+              <input name="ip_address" required placeholder="192.168.0.50" />
+            </div>
+            <div class="field">
+              <label>Porta</label>
+              <input name="port" type="number" value="9100" />
+            </div>
+            <div class="field">
+              <label>Colunas por linha</label>
+              <input name="char_per_line" type="number" value="42" />
+            </div>
+            <div class="md:col-span-2">
+              <button type="submit" class="btn btn-primary">Adicionar</button>
+            </div>
+          </form>
+        </details>
+      </section>
+
+      <!-- Configured printers -->
+      <section class="card p-6">
+        <h2 class="mb-4 text-lg font-semibold">Impressoras configuradas</h2>
+        <div id="printers" class="space-y-3"></div>
+      </section>
+
+      <!-- Help -->
+      <section class="card p-6 text-sm text-slate-600">
+        <h2 class="mb-2 text-lg font-semibold text-slate-900">Dicas</h2>
+        <ul class="list-inside list-disc space-y-1">
+          <li>
+            Para menor instabilidade, prefira impressora em
+            <strong>rede (TCP/IP)</strong> em vez de compartilhamento Windows (SMB).
+          </li>
+          <li>
+            Se a impressora parar, clique em <strong>Reiniciar Spooler</strong> antes de pensar em
+            reiniciar o PC.
+          </li>
+          <li>
+            Logs ficam em <code class="rounded bg-slate-100 px-1">logs/print-*.log</code> com
+            rota&ccedil;&atilde;o di&aacute;ria.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

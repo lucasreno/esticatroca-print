@@ -1,0 +1,10 @@
+node_modules/
+dist/
+logs/
+data/data.json
+data/*.bak.json
+img/
+logos/
+*.log
+.env
+.env.local
