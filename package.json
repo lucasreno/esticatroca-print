@@ -1,6 +1,6 @@
 {
   "name": "esticatroca-print",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Servico local de impressao ESC/POS para o ecossistema Esticatroca (Windows service + WebSocket).",
   "main": "dist/server.js",
