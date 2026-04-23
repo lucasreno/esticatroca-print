@@ -15,6 +15,34 @@ export const HTTP_PORT = Number(process.env.PRINT_HTTP_PORT ?? 6442);
 export const HTTP_HOST = process.env.PRINT_HTTP_HOST ?? '127.0.0.1';
 export const JOB_TIMEOUT_MS = Number(process.env.PRINT_JOB_TIMEOUT_MS ?? 15_000);
 
+/**
+ * Default column width for 80mm thermal printers using ESC/POS font A
+ * (48 columns ≈ 576 dots). Override per-printer via `char_per_line`.
+ */
+export const DEFAULT_CHAR_PER_LINE = 48;
+
+/**
+ * Default character set for Brazilian ESC/POS printers. WPC1252 (Windows-1252)
+ * cobre todo o português com acentuação correta e é o mais compatível entre
+ * Bematech, Bixolon, Epson, Elgin e afins. Override per-printer via
+ * `character_set` (ver `SUPPORTED_CHARACTER_SETS`).
+ */
+export const DEFAULT_CHARACTER_SET = 'WPC1252';
+
+/**
+ * Conjuntos de caracteres selecionáveis na UI admin. Os valores devem
+ * corresponder exatamente aos membros do enum `CharacterSet` da
+ * biblioteca `node-thermal-printer`.
+ */
+export const SUPPORTED_CHARACTER_SETS = [
+  'WPC1252',
+  'PC850_MULTILINGUAL',
+  'PC860_PORTUGUESE',
+  'PC858_EURO',
+  'PC437_USA',
+] as const;
+export type SupportedCharacterSet = (typeof SUPPORTED_CHARACTER_SETS)[number];
+
 export function ensureDirs(): void {
   for (const dir of [DATA_DIR, LOGS_DIR, IMG_DIR, LOGOS_DIR]) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -35,10 +63,15 @@ export interface PrinterConfig {
   port?: number;
   /** ESC/POS capability profile: 'default', 'simple', 'SP2000', etc. */
   profile?: string;
-  /** Characters per line (42 for 58mm, 48/80 for 80mm) */
+  /** Characters per line (42 for 58mm, 48 for 80mm). Default: 48. */
   char_per_line?: number;
   /** Printer family for node-thermal-printer: 'epson' | 'star' | 'custom' */
   driver?: 'epson' | 'star' | 'custom';
+  /**
+   * Code page enviado à impressora. Default: WPC1252. Valores suportados
+   * estão em `SUPPORTED_CHARACTER_SETS`.
+   */
+  character_set?: string;
   /** Milliseconds to wait for a job before considering the printer stuck */
   timeout_ms?: number;
 }

@@ -1,7 +1,14 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
+import path from 'node:path';
+import fs from 'node:fs';
 import { logger } from './logger';
 import type { PrinterConfig } from './config';
-import { JOB_TIMEOUT_MS } from './config';
+import {
+  JOB_TIMEOUT_MS,
+  DEFAULT_CHAR_PER_LINE,
+  DEFAULT_CHARACTER_SET,
+  LOGOS_DIR,
+} from './config';
 
 // node-thermal-printer has no bundled types; load at runtime and cast.
 // Lazy-require so the service still boots on machines where the native
@@ -77,13 +84,22 @@ function buildPrinter(cfg: PrinterConfig) {
   };
   const type = driverMap[cfg.driver ?? 'epson'] ?? PrinterTypes.EPSON;
   const ThermalPrinter = lib.printer;
+  const requestedCharset = cfg.character_set ?? DEFAULT_CHARACTER_SET;
+  const resolvedCharset =
+    CharacterSet?.[requestedCharset] ?? CharacterSet?.[DEFAULT_CHARACTER_SET];
+  if (!CharacterSet?.[requestedCharset]) {
+    logger.warn(
+      { requested: requestedCharset, fallback: DEFAULT_CHARACTER_SET },
+      'character_set desconhecido; usando default',
+    );
+  }
   const p = new ThermalPrinter({
     type,
     interface: buildInterface(cfg),
-    characterSet: CharacterSet?.PC860_PORTUGUESE,
+    characterSet: resolvedCharset,
     removeSpecialCharacters: false,
     lineCharacter: '-',
-    width: cfg.char_per_line ?? 42,
+    width: cfg.char_per_line ?? DEFAULT_CHAR_PER_LINE,
     options: { timeout: cfg.timeout_ms ?? JOB_TIMEOUT_MS },
   });
   return p;
@@ -134,12 +150,17 @@ export async function printTestPage(cfg: PrinterConfig): Promise<void> {
  */
 export async function printReceipt(cfg: PrinterConfig, data: ReceiptPayload): Promise<void> {
   const p = buildPrinter(cfg);
-  const width = cfg.char_per_line ?? 42;
+  const width = cfg.char_per_line ?? DEFAULT_CHAR_PER_LINE;
 
   if (data.logo) {
     try {
-      p.alignCenter();
-      await p.printImage(data.logo);
+      const logoPath = resolveLogoPath(data.logo);
+      if (logoPath) {
+        p.alignCenter();
+        await p.printImage(logoPath);
+      } else {
+        logger.warn({ logo: data.logo }, 'Logo nao encontrada em logos/');
+      }
     } catch (err) {
       logger.warn({ err: (err as Error).message, logo: data.logo }, 'Falha ao imprimir logo');
     }
@@ -249,6 +270,34 @@ function dataUrlToBuffer(dataUrl: string): Buffer {
   const match = /^data:image\/\w+;base64,(.+)$/.exec(dataUrl.trim());
   const b64 = match ? match[1] : dataUrl;
   return Buffer.from(b64, 'base64');
+}
+
+/**
+ * Resolves a logo reference from the WS payload into an absolute path
+ * readable by node-thermal-printer. Accepts:
+ *  - absolute path (`C:\...\logo.png`) → used as-is
+ *  - path containing separators → resolved relative to LOGOS_DIR
+ *  - bare filename (`logo.png`) → resolved in LOGOS_DIR
+ * Returns `undefined` if the file does not exist on disk.
+ */
+function resolveLogoPath(ref: string): string | undefined {
+  const trimmed = ref.trim();
+  if (!trimmed) return undefined;
+  const candidates: string[] = [];
+  if (path.isAbsolute(trimmed)) {
+    candidates.push(trimmed);
+  } else {
+    candidates.push(path.join(LOGOS_DIR, trimmed));
+    candidates.push(path.resolve(trimmed));
+  }
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c) && fs.statSync(c).isFile()) return c;
+    } catch {
+      /* ignore */
+    }
+  }
+  return undefined;
 }
 
 function withTimeout<T>(promise: Promise<T> | T, ms: number): Promise<T> {

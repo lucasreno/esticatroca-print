@@ -7,7 +7,8 @@
       "path": "Bematech MP-100S TH",
       "driver": "epson",
       "profile": "default",
-      "char_per_line": 42,
+      "char_per_line": 48,
+      "character_set": "WPC1252",
       "timeout_ms": 15000
     },
     {
@@ -19,6 +20,7 @@
       "driver": "epson",
       "profile": "default",
       "char_per_line": 48,
+      "character_set": "WPC1252",
       "timeout_ms": 15000
     }
   ],

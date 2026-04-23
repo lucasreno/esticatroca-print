@@ -12,6 +12,9 @@ import {
   readDb,
   writeDb,
   type PrinterConfig,
+  DEFAULT_CHAR_PER_LINE,
+  DEFAULT_CHARACTER_SET,
+  SUPPORTED_CHARACTER_SETS,
 } from './config';
 import { listWindowsPrinters, restartSpooler } from './windows';
 import { checkConnection, openCashDrawer, printTestPage } from './printer';
@@ -27,6 +30,7 @@ const PrinterSchema = z.object({
   profile: z.string().optional(),
   char_per_line: z.number().int().positive().optional(),
   driver: z.enum(['epson', 'star', 'custom']).optional(),
+  character_set: z.string().optional(),
   timeout_ms: z.number().int().positive().optional(),
 });
 
@@ -49,6 +53,12 @@ export async function startAdminServer(): Promise<FastifyInstance> {
     service: 'esticatroca-print',
     version: require('../package.json').version,
     queue: printQueue.stats(),
+  }));
+
+  app.get('/api/meta', async () => ({
+    default_char_per_line: DEFAULT_CHAR_PER_LINE,
+    default_character_set: DEFAULT_CHARACTER_SET,
+    character_sets: SUPPORTED_CHARACTER_SETS,
   }));
 
   app.get('/api/printers', async () => readDb());

@@ -63,6 +63,47 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* Meta (defaults + code pages suportados)                             */
+  /* ------------------------------------------------------------------ */
+  var meta = {
+    default_char_per_line: 48,
+    default_character_set: 'WPC1252',
+    character_sets: ['WPC1252', 'PC850_MULTILINGUAL', 'PC860_PORTUGUESE', 'PC858_EURO', 'PC437_USA'],
+  };
+
+  function populateCharsetSelects() {
+    var selects = document.querySelectorAll('[data-charset-select]');
+    selects.forEach(function (sel) {
+      var current = sel.getAttribute('data-current') || meta.default_character_set;
+      sel.innerHTML = '';
+      meta.character_sets.forEach(function (cs) {
+        var opt = document.createElement('option');
+        opt.value = cs;
+        opt.textContent =
+          cs + (cs === meta.default_character_set ? ' (padr\u00e3o)' : '');
+        if (cs === current) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  async function loadMeta() {
+    try {
+      var data = await api('GET', '/api/meta');
+      meta = Object.assign(meta, data);
+    } catch (err) {
+      // Keep fallback defaults on failure
+      console.warn('Falha ao carregar /api/meta', err);
+    }
+    populateCharsetSelects();
+    // Apply default char_per_line to the network form
+    var colsInput = document.getElementById('net-cols');
+    if (colsInput && !colsInput.dataset.userSet) {
+      colsInput.value = String(meta.default_char_per_line);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
   /* Health                                                              */
   /* ------------------------------------------------------------------ */
   async function refreshHealth() {
@@ -128,7 +169,8 @@
           title: p.name,
           type: 'windows',
           path: p.name,
-          char_per_line: 42,
+          char_per_line: meta.default_char_per_line,
+          character_set: meta.default_character_set,
           driver: 'epson',
           profile: 'default',
         });
@@ -203,6 +245,7 @@
     var btnTest = el('button', { className: 'btn btn-secondary', type: 'button' }, 'Testar impress\u00e3o');
     var btnDrawer = el('button', { className: 'btn btn-secondary', type: 'button' }, 'Abrir gaveta');
     var btnStatus = el('button', { className: 'btn btn-secondary', type: 'button' }, 'Checar conex\u00e3o');
+    var btnConfig = el('button', { className: 'btn btn-secondary', type: 'button' }, 'Configurar');
     var btnReceipt = el(
       'button',
       { className: isReceipt ? 'btn btn-secondary' : 'btn btn-primary', type: 'button' },
@@ -276,16 +319,113 @@
       btnTest,
       btnDrawer,
       btnStatus,
+      btnConfig,
       btnReceipt,
       btnOrder,
       btnDelete,
     ]);
 
+    var configPanel = renderConfigPanel(p);
+    btnConfig.addEventListener('click', function () {
+      configPanel.hidden = !configPanel.hidden;
+    });
+
     return el(
       'div',
       { className: 'printer-card' + (isReceipt ? ' is-primary' : '') },
-      [head, actions],
+      [head, actions, configPanel],
     );
+  }
+
+  function renderConfigPanel(p) {
+    var colsId = 'cfg-cols-' + p.id;
+    var charsetId = 'cfg-charset-' + p.id;
+    var driverId = 'cfg-driver-' + p.id;
+
+    var colsInput = el('input', {
+      id: colsId,
+      name: 'char_per_line',
+      type: 'number',
+      value: String(p.char_per_line != null ? p.char_per_line : meta.default_char_per_line),
+      attrs: { min: '20', max: '96' },
+    });
+
+    var charsetSelect = el('select', {
+      id: charsetId,
+      name: 'character_set',
+      attrs: {
+        'data-charset-select': '',
+        'data-current': p.character_set || meta.default_character_set,
+      },
+    });
+
+    var driverSelect = el('select', { id: driverId, name: 'driver' });
+    ['epson', 'star', 'custom'].forEach(function (d) {
+      var opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      if ((p.driver || 'epson') === d) opt.selected = true;
+      driverSelect.appendChild(opt);
+    });
+
+    var saveBtn = el('button', { className: 'btn btn-primary', type: 'submit' }, 'Salvar');
+    var form = el('form', { className: 'grid-2' }, [
+      el('div', { className: 'field' }, [
+        el('label', { attrs: { for: colsId } }, 'Colunas por linha'),
+        colsInput,
+      ]),
+      el('div', { className: 'field' }, [
+        el('label', { attrs: { for: charsetId } }, 'Code page (acentua\u00e7\u00e3o)'),
+        charsetSelect,
+      ]),
+      el('div', { className: 'field' }, [
+        el('label', { attrs: { for: driverId } }, 'Driver ESC/POS'),
+        driverSelect,
+      ]),
+      el('div', { attrs: { style: 'grid-column: 1 / -1;' } }, [saveBtn]),
+    ]);
+
+    form.addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      saveBtn.disabled = true;
+      try {
+        var payload = {
+          id: p.id,
+          title: p.title,
+          type: p.type,
+          path: p.path,
+          ip_address: p.ip_address,
+          port: p.port,
+          profile: p.profile,
+          timeout_ms: p.timeout_ms,
+          char_per_line: Number(colsInput.value) || meta.default_char_per_line,
+          character_set: charsetSelect.value || meta.default_character_set,
+          driver: driverSelect.value || 'epson',
+        };
+        // Strip undefineds to avoid polluting data.json
+        Object.keys(payload).forEach(function (k) {
+          if (payload[k] === undefined) delete payload[k];
+        });
+        await api('POST', '/api/printers', payload);
+        toast('Configura\u00e7\u00e3o salva.', 'ok', p.title);
+        refreshPrinters();
+      } catch (err) {
+        toast(err.message, 'err');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    // Populate charset options after select is in the DOM tree
+    setTimeout(populateCharsetSelects, 0);
+
+    var panel = el(
+      'div',
+      { attrs: { style: 'margin-top:14px; padding-top:14px; border-top:1px dashed var(--c-border);' } },
+      [form],
+    );
+    panel.hidden = true;
+    return panel;
   }
 
   async function wrap(btn, fn, okMessage) {
@@ -332,7 +472,8 @@
       type: 'network',
       ip_address: form.get('ip_address'),
       port: Number(form.get('port')) || 9100,
-      char_per_line: Number(form.get('char_per_line')) || 42,
+      char_per_line: Number(form.get('char_per_line')) || meta.default_char_per_line,
+      character_set: form.get('character_set') || meta.default_character_set,
       driver: 'epson',
       profile: 'default',
     };
@@ -347,7 +488,9 @@
   });
 
   refreshHealth();
-  refreshDiscovery();
-  refreshPrinters();
+  loadMeta().then(function () {
+    refreshDiscovery();
+    refreshPrinters();
+  });
   setInterval(refreshHealth, 5000);
 })();
