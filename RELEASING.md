@@ -144,6 +144,7 @@ Se uma versão quebrar na loja:
 | `npm ci` falha em `@grandchef/node-printer` no runner | Node-gyp / Python / MSBuild faltando no `windows-latest` (raro) | Fixe imagem: `runs-on: windows-2022`. Se persistir, rode local e publique o zip manualmente em *Releases → Edit* |
 | `softprops/action-gh-release` erra com 422 | Tag já existia com outro commit | Apague a tag remota (`git push origin :print-vX.Y.Z`) e recrie |
 | Zip gerado sem `node_modules/` | `npm ci --omit=dev` falhou silenciosamente no stage | Veja log do step "Pack release"; normalmente é peer dep quebrada |
+| `503` ao baixar NSSM no workflow | `nssm.cc` fora do ar (frequente) | J&aacute; mitigado: o bin&aacute;rio est&aacute; comitado em `release/bin/nssm.exe` e o script prioriza ele. Se precisar trocar de vers&atilde;o, veja `release/bin/README.txt`. |
 
 ---
 

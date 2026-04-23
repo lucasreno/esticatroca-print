@@ -76,25 +76,60 @@ $nodeSrc = Get-ChildItem -Directory $nodeExtractTmp | Select-Object -First 1
 $nodeDst = Join-Path $stageDir 'node'
 Copy-Item -Recurse -Force $nodeSrc.FullName $nodeDst
 
-# --- 2. Baixa NSSM -----------------------------------------------------
-$nssmZipName = "nssm-$NssmVersion.zip"
-$nssmUrl     = "https://nssm.cc/release/$nssmZipName"
-$nssmZipPath = Join-Path $cacheDir $nssmZipName
+# --- 2. Obtem NSSM -----------------------------------------------------
+# Ordem de preferencia:
+#   1. release\bin\nssm.exe comitado no repo (mais robusto, elimina rede).
+#   2. Cache local.
+#   3. Download com fallback entre nssm.cc e chocolatey.org (nssm.cc fica 503 com frequencia).
+$stagedNssm    = Join-Path $stageDir 'nssm.exe'
+$vendoredNssm  = Join-Path $repoRoot 'release\bin\nssm.exe'
 
-if (-not (Test-Path $nssmZipPath)) {
-  Write-Host "==> Baixando NSSM $NssmVersion..." -ForegroundColor Cyan
-  Invoke-WebRequest -Uri $nssmUrl -OutFile $nssmZipPath -UseBasicParsing
+if (Test-Path $vendoredNssm) {
+  Write-Host "==> Usando NSSM comitado em release\bin\nssm.exe" -ForegroundColor Green
+  Copy-Item -Force $vendoredNssm $stagedNssm
 } else {
-  Write-Host "==> Usando NSSM em cache" -ForegroundColor DarkGray
-}
+  $nssmZipName = "nssm-$NssmVersion.zip"
+  $nssmZipPath = Join-Path $cacheDir $nssmZipName
 
-$nssmExtractTmp = Join-Path $cacheDir 'nssm-extract'
-if (Test-Path $nssmExtractTmp) { Remove-Item -Recurse -Force $nssmExtractTmp }
-Expand-Archive -Path $nssmZipPath -DestinationPath $nssmExtractTmp -Force
-$nssmExe = Get-ChildItem -Recurse -Path $nssmExtractTmp -Filter 'nssm.exe' |
-  Where-Object { $_.FullName -match 'win64' } | Select-Object -First 1
-if (-not $nssmExe) { throw 'nssm.exe win64 nao encontrado no zip baixado.' }
-Copy-Item -Force $nssmExe.FullName (Join-Path $stageDir 'nssm.exe')
+  $nssmMirrors = @(
+    "https://nssm.cc/release/$nssmZipName",
+    "https://nssm.cc/ci/$nssmZipName",
+    # Chocolatey serve o mesmo binario como .nupkg (zip com manifesto NuGet).
+    # Renomeado para .zip no cache para Expand-Archive aceitar.
+    "https://chocolatey.org/api/v2/package/NSSM/$NssmVersion"
+  )
+
+  if (-not (Test-Path $nssmZipPath)) {
+    $downloaded = $false
+    foreach ($url in $nssmMirrors) {
+      for ($attempt = 1; $attempt -le 3; $attempt++) {
+        Write-Host "==> Baixando NSSM (tentativa $attempt): $url" -ForegroundColor Cyan
+        try {
+          Invoke-WebRequest -Uri $url -OutFile $nssmZipPath -UseBasicParsing -TimeoutSec 60
+          $downloaded = $true
+          break
+        } catch {
+          Write-Warning ("Falhou ({0}): {1}" -f $url, $_.Exception.Message)
+          Start-Sleep -Seconds ([math]::Min(10, [math]::Pow(2, $attempt)))
+        }
+      }
+      if ($downloaded) { break }
+    }
+    if (-not $downloaded) {
+      throw "NSSM nao pode ser baixado de nenhum mirror. Comite release\bin\nssm.exe no repositorio para builds offline."
+    }
+  } else {
+    Write-Host "==> Usando NSSM em cache" -ForegroundColor DarkGray
+  }
+
+  $nssmExtractTmp = Join-Path $cacheDir 'nssm-extract'
+  if (Test-Path $nssmExtractTmp) { Remove-Item -Recurse -Force $nssmExtractTmp }
+  Expand-Archive -Path $nssmZipPath -DestinationPath $nssmExtractTmp -Force
+  $nssmExe = Get-ChildItem -Recurse -Path $nssmExtractTmp -Filter 'nssm.exe' |
+    Where-Object { $_.FullName -match 'win64' } | Select-Object -First 1
+  if (-not $nssmExe) { throw 'nssm.exe win64 nao encontrado no zip baixado.' }
+  Copy-Item -Force $nssmExe.FullName $stagedNssm
+}
 
 # --- 3. Build TypeScript -----------------------------------------------
 Write-Host "==> Compilando TypeScript (npm run build)..." -ForegroundColor Cyan
