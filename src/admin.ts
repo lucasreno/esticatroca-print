@@ -8,6 +8,8 @@ import {
   HTTP_HOST,
   HTTP_PORT,
   WEB_DIR,
+  ALLOWED_ORIGINS,
+  ALLOW_NO_ORIGIN,
   findPrinter,
   readDb,
   writeDb,
@@ -23,15 +25,17 @@ import { printQueue } from './queue';
 const PrinterSchema = z.object({
   id: z.string().min(1).optional(),
   title: z.string().min(1),
-  type: z.enum(['windows', 'network', 'file']),
-  path: z.string().optional(),
+  // 'file' removido: type=file permitia escrever em qualquer caminho como
+  // SYSTEM. Se precisar futuramente, restringir a um diretório allow-listed.
+  type: z.enum(['windows', 'network']),
+  path: z.string().max(260).optional(),
   ip_address: z.string().optional(),
-  port: z.number().int().positive().optional(),
+  port: z.number().int().positive().max(65535).optional(),
   profile: z.string().optional(),
-  char_per_line: z.number().int().positive().optional(),
+  char_per_line: z.number().int().min(20).max(96).optional(),
   driver: z.enum(['epson', 'star', 'custom']).optional(),
   character_set: z.string().optional(),
-  timeout_ms: z.number().int().positive().optional(),
+  timeout_ms: z.number().int().positive().max(120000).optional(),
 });
 
 const AssignmentSchema = z.object({
@@ -41,6 +45,30 @@ const AssignmentSchema = z.object({
 
 export async function startAdminServer(): Promise<FastifyInstance> {
   const app = Fastify({ logger: false, disableRequestLogging: true });
+
+  // Hardening: barra CSRF/DNS-rebinding validando Origin e Host em toda
+  // requisição mutante. GETs seguem liberados.
+  app.addHook('onRequest', async (req, reply) => {
+    const method = req.method.toUpperCase();
+    if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
+    const host = ((req.headers.host as string) ?? '').split(':')[0].toLowerCase();
+    if (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '::1') {
+      reply.code(403).send({ ok: false, message: 'Host nao permitido' });
+      return reply;
+    }
+    const origin = req.headers.origin as string | undefined;
+    if (!origin) {
+      if (!ALLOW_NO_ORIGIN) {
+        reply.code(403).send({ ok: false, message: 'Origin obrigatoria' });
+        return reply;
+      }
+      return;
+    }
+    if (!ALLOWED_ORIGINS.has(origin)) {
+      reply.code(403).send({ ok: false, message: 'Origin nao permitida' });
+      return reply;
+    }
+  });
 
   await app.register(fastifyStatic, {
     root: path.resolve(WEB_DIR),
@@ -132,7 +160,7 @@ export async function startAdminServer(): Promise<FastifyInstance> {
     return reply.send(result);
   });
 
-  app.post('/api/system/restart-spooler', async (req, reply) => {
+  app.post('/api/system/restart-spooler', async (_req, reply) => {
     const result = await restartSpooler();
     return reply.code(result.ok ? 200 : 500).send(result);
   });
@@ -141,3 +169,4 @@ export async function startAdminServer(): Promise<FastifyInstance> {
   logger.info({ host: HTTP_HOST, port: HTTP_PORT }, 'Admin HTTP escutando');
   return app;
 }
+

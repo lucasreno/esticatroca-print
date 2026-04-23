@@ -2,6 +2,10 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { logger } from './logger';
 import {
   WS_PORT,
+  WS_HOST,
+  WS_MAX_PAYLOAD,
+  ALLOWED_ORIGINS,
+  ALLOW_NO_ORIGIN,
   findPrinter,
   getOrderPrinters,
   getReceiptPrinter,
@@ -30,10 +34,33 @@ interface OutgoingAck {
 }
 
 export function startWsServer(): WebSocketServer {
-  const wss = new WebSocketServer({ port: WS_PORT, host: '0.0.0.0' });
+  const wss = new WebSocketServer({
+    port: WS_PORT,
+    host: WS_HOST,
+    maxPayload: WS_MAX_PAYLOAD,
+    verifyClient: (info, done) => {
+      // Barra CSWSH e DNS rebinding: exige Origin conhecida e Host loopback.
+      const origin = info.req.headers.origin;
+      const host = ((info.req.headers.host as string) ?? '').split(':')[0].toLowerCase();
+      const hostOk =
+        host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '';
+      if (!hostOk) {
+        logger.warn({ host, origin }, 'WS rejeitado: host nao-loopback');
+        return done(false, 403, 'Forbidden');
+      }
+      if (!origin) {
+        if (ALLOW_NO_ORIGIN) return done(true);
+        logger.warn('WS rejeitado: Origin ausente');
+        return done(false, 403, 'Origin required');
+      }
+      if (ALLOWED_ORIGINS.has(origin)) return done(true);
+      logger.warn({ origin }, 'WS rejeitado: Origin nao permitida');
+      return done(false, 403, 'Origin not allowed');
+    },
+  });
 
   wss.on('listening', () => {
-    logger.info({ port: WS_PORT }, 'WebSocket de impressao escutando');
+    logger.info({ host: WS_HOST, port: WS_PORT }, 'WebSocket de impressao escutando');
   });
 
   wss.on('connection', (socket, req) => {
@@ -159,30 +186,26 @@ function notFound(id: IncomingMessage['id']): OutgoingAck {
 }
 
 function pickPrinter(raw: unknown): PrinterConfig | undefined {
+  // Segurança: NUNCA confiar em { type, path } vindo do cliente WS. Isso
+  // permitiria path traversal em type='file' (escrita arbitrária como
+  // SYSTEM) e uso de impressoras não cadastradas. Aceitar apenas { id }
+  // e resolver via configuração local.
   if (raw && typeof raw === 'object') {
-    const candidate = raw as Partial<PrinterConfig>;
-    if (candidate.id) {
+    const candidate = raw as { id?: unknown };
+    if (typeof candidate.id === 'string' && candidate.id) {
       const found = findPrinter(candidate.id);
       if (found) return found;
-    }
-    if (candidate.type && candidate.path !== undefined) {
-      return candidate as PrinterConfig;
+      logger.warn({ id: candidate.id }, 'pickPrinter: id desconhecido, caindo para receipt');
     }
   }
   return getReceiptPrinter();
 }
 
-/**
- * Resolves one or more printers for a message. Mirrors the legacy
- * Printer resolution fallback cascade:
- *   1. data.printer explicit -> that printer
- *   2. data.order present and no explicit printer -> all order_printers
- *   3. otherwise -> receipt_printer
- */
 function resolveTargets(payload: any): PrinterConfig[] {
   if (payload?.printer) {
     const p = pickPrinter(payload.printer);
-    return p ? [p] : [];
+    if (p) return [p];
+    logger.warn({ printer: payload.printer }, 'resolveTargets: printer invalido, fallback para receipt');
   }
   if (payload?.order !== undefined && payload?.order !== null && payload?.order !== '') {
     const orderPrinters = getOrderPrinters();
@@ -192,10 +215,6 @@ function resolveTargets(payload: any): PrinterConfig[] {
   return receipt ? [receipt] : [];
 }
 
-/**
- * The legacy protocol sometimes sends `data` as a JSON-encoded string
- * (see server.php "print-data" branch). Accept both shapes.
- */
 function normalizeReceiptPayload(raw: unknown): ReceiptPayload & { printer?: any; order?: any } {
   if (typeof raw === 'string') {
     try {
@@ -206,3 +225,4 @@ function normalizeReceiptPayload(raw: unknown): ReceiptPayload & { printer?: any
   }
   return (raw as any) ?? {};
 }
+

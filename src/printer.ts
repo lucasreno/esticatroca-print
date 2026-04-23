@@ -274,28 +274,29 @@ function dataUrlToBuffer(dataUrl: string): Buffer {
 
 /**
  * Resolves a logo reference from the WS payload into an absolute path
- * readable by node-thermal-printer. Accepts:
- *  - absolute path (`C:\...\logo.png`) → used as-is
- *  - path containing separators → resolved relative to LOGOS_DIR
- *  - bare filename (`logo.png`) → resolved in LOGOS_DIR
- * Returns `undefined` if the file does not exist on disk.
+ * readable by node-thermal-printer. Apenas caminhos dentro de LOGOS_DIR
+ * são aceitos — NUNCA caminhos absolutos ou com `..` escapando o diretório
+ * (caso contrário, um cliente WS poderia imprimir arquivos sensíveis).
  */
 function resolveLogoPath(ref: string): string | undefined {
   const trimmed = ref.trim();
   if (!trimmed) return undefined;
-  const candidates: string[] = [];
-  if (path.isAbsolute(trimmed)) {
-    candidates.push(trimmed);
-  } else {
-    candidates.push(path.join(LOGOS_DIR, trimmed));
-    candidates.push(path.resolve(trimmed));
+  // Rejeita caminhos absolutos e URIs: só permite referências relativas
+  // à pasta `logos/` do próprio serviço.
+  if (path.isAbsolute(trimmed) || /^[a-z]+:/i.test(trimmed)) {
+    logger.warn({ logo: trimmed }, 'Logo com caminho absoluto rejeitado');
+    return undefined;
   }
-  for (const c of candidates) {
-    try {
-      if (fs.existsSync(c) && fs.statSync(c).isFile()) return c;
-    } catch {
-      /* ignore */
-    }
+  const resolved = path.resolve(LOGOS_DIR, trimmed);
+  const logosRoot = path.resolve(LOGOS_DIR) + path.sep;
+  if (!(resolved + path.sep).startsWith(logosRoot) && resolved !== path.resolve(LOGOS_DIR)) {
+    logger.warn({ logo: trimmed, resolved }, 'Logo fora de LOGOS_DIR rejeitada');
+    return undefined;
+  }
+  try {
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) return resolved;
+  } catch {
+    /* ignore */
   }
   return undefined;
 }

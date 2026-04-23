@@ -11,9 +11,36 @@ export const WEB_DIR = path.join(ROOT, 'web');
 export const DATA_FILE = path.join(DATA_DIR, 'data.json');
 
 export const WS_PORT = Number(process.env.PRINT_WS_PORT ?? 6441);
+export const WS_HOST = process.env.PRINT_WS_HOST ?? '127.0.0.1';
 export const HTTP_PORT = Number(process.env.PRINT_HTTP_PORT ?? 6442);
 export const HTTP_HOST = process.env.PRINT_HTTP_HOST ?? '127.0.0.1';
 export const JOB_TIMEOUT_MS = Number(process.env.PRINT_JOB_TIMEOUT_MS ?? 15_000);
+
+/**
+ * Payload máximo aceito pelo WebSocket. Default 4 MiB cobre imagens de
+ * recibo razoáveis (base64 de PNG ~1-2 MB) sem permitir OOM trivial.
+ */
+export const WS_MAX_PAYLOAD = Number(process.env.PRINT_WS_MAX_PAYLOAD ?? 4 * 1024 * 1024);
+
+/**
+ * Lista separada por vírgulas de origens HTTP permitidas para conectar no
+ * WebSocket e no admin HTTP. Protege contra CSWSH / DNS rebinding. Por
+ * padrão aceita apenas os hosts loopback e a origem nula (ferramentas de
+ * CLI como `wscat` enviam sem Origin).
+ */
+const RAW_ALLOWED_ORIGINS = (process.env.PRINT_ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+export const ALLOWED_ORIGINS = new Set<string>([
+  'http://localhost:4200',
+  'http://127.0.0.1:4200',
+  'http://localhost',
+  'http://127.0.0.1',
+  ...RAW_ALLOWED_ORIGINS,
+]);
+export const ALLOW_NO_ORIGIN =
+  (process.env.PRINT_ALLOW_NO_ORIGIN ?? '1') !== '0';
 
 /**
  * Default column width for 80mm thermal printers using ESC/POS font A
@@ -99,7 +126,20 @@ export function readDb(): PrintDatabase {
       receipt_printer: parsed.receipt_printer ?? '',
       order_printers: Array.isArray(parsed.order_printers) ? parsed.order_printers : [],
     };
-  } catch {
+  } catch (err) {
+    // Corrupção do arquivo: preservar o original para inspeção, NÃO
+    // sobrescrever silenciosamente com um DB vazio na próxima writeDb.
+    try {
+      const backup = `${DATA_FILE}.corrupt-${Date.now()}`;
+      if (fs.existsSync(DATA_FILE)) fs.copyFileSync(DATA_FILE, backup);
+      // eslint-disable-next-line no-console
+      console.error(
+        `[config] data.json corrompido (${(err as Error).message}). ` +
+          `Backup em ${backup}. Retornando DB vazio temporariamente.`,
+      );
+    } catch {
+      /* ignore backup failures */
+    }
     return { ...EMPTY_DB };
   }
 }
@@ -107,7 +147,17 @@ export function readDb(): PrintDatabase {
 export function writeDb(db: PrintDatabase): void {
   ensureDirs();
   const tmp = `${DATA_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(db, null, 2), 'utf8');
+  const fd = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, JSON.stringify(db, null, 2));
+    try {
+      fs.fsyncSync(fd);
+    } catch {
+      /* fsync pode falhar em alguns FS (ex.: FAT); não é fatal */
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
   fs.renameSync(tmp, DATA_FILE);
 }
 
