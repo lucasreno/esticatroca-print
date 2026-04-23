@@ -1,233 +1,353 @@
-const $ = (sel) => document.querySelector(sel);
-const el = (tag, props = {}, children = []) => {
-  const node = Object.assign(document.createElement(tag), props);
-  for (const child of [].concat(children)) {
-    if (child == null) continue;
-    node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
-  }
-  return node;
-};
+/* Esticatroca Print — admin UI */
+(function () {
+  'use strict';
 
-async function api(method, path, body) {
-  const res = await fetch(path, {
-    method,
-    headers: body ? { 'content-type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
-  return data;
-}
+  var $ = function (sel) {
+    return document.querySelector(sel);
+  };
 
-async function refreshHealth() {
-  const chip = $('#health-chip');
-  try {
-    const data = await api('GET', '/api/health');
-    chip.textContent = 'ativo';
-    chip.className = 'chip chip-ok';
-    $('#version').textContent = `v${data.version}`;
-  } catch (err) {
-    chip.textContent = 'offline';
-    chip.className = 'chip chip-err';
-    $('#version').textContent = err.message;
-  }
-}
-
-async function refreshDiscovery() {
-  const container = $('#discovery');
-  container.innerHTML = '<div class="text-sm text-slate-500">Buscando...</div>';
-  try {
-    const data = await api('GET', '/api/printers/discover');
-    if (!data.printers.length) {
-      container.innerHTML =
-        '<div class="text-sm text-slate-500">Nenhuma impressora encontrada. Verifique se a impressora esta instalada em Configuracoes &rarr; Impressoras.</div>';
-      return;
+  function el(tag, props, children) {
+    var node = document.createElement(tag);
+    if (props) {
+      for (var k in props) {
+        if (k === 'className') node.className = props[k];
+        else if (k === 'textContent') node.textContent = props[k];
+        else if (k === 'attrs') {
+          for (var a in props.attrs) node.setAttribute(a, props.attrs[a]);
+        } else node[k] = props[k];
+      }
     }
-    container.innerHTML = '';
-    data.printers.forEach((p) => container.appendChild(renderDiscovered(p)));
-  } catch (err) {
-    container.innerHTML = `<div class="text-sm text-rose-600">Erro: ${err.message}</div>`;
+    var list = [].concat(children == null ? [] : children);
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if (c == null || c === false) continue;
+      node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    }
+    return node;
   }
-}
 
-function renderDiscovered(p) {
-  const title = el('div', { className: 'font-medium' }, p.name);
-  const meta = el(
-    'div',
-    { className: 'text-xs text-slate-500' },
-    [p.driverName, p.portName, p.status].filter(Boolean).join(' - '),
-  );
-  const addBtn = el('button', { className: 'btn btn-primary' }, 'Adicionar');
-  addBtn.addEventListener('click', async () => {
-    addBtn.disabled = true;
+  /* ------------------------------------------------------------------ */
+  /* Toasts (feedback, Nielsen #1)                                       */
+  /* ------------------------------------------------------------------ */
+  function toast(message, kind, title) {
+    var host = $('#toasts');
+    if (!host) return;
+    var t = el('div', { className: 'toast ' + (kind || '') }, [
+      title ? el('div', { className: 'toast-title' }, title) : null,
+      el('div', {}, message),
+    ]);
+    host.appendChild(t);
+    setTimeout(function () {
+      t.style.transition = 'opacity 200ms ease';
+      t.style.opacity = '0';
+      setTimeout(function () {
+        if (t.parentNode) t.parentNode.removeChild(t);
+      }, 220);
+    }, kind === 'err' ? 5200 : 3200);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* API helper                                                          */
+  /* ------------------------------------------------------------------ */
+  async function api(method, path, body) {
+    var res = await fetch(path, {
+      method: method,
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    var data = await res.json().catch(function () {
+      return {};
+    });
+    if (!res.ok) throw new Error(data.message || 'HTTP ' + res.status);
+    return data;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Health                                                              */
+  /* ------------------------------------------------------------------ */
+  async function refreshHealth() {
+    var chip = $('#health-chip');
     try {
-      await api('POST', '/api/printers', {
-        title: p.name,
-        type: 'windows',
-        path: p.name,
-        char_per_line: 42,
-        driver: 'epson',
-        profile: 'default',
-      });
-      await refreshPrinters();
+      var data = await api('GET', '/api/health');
+      chip.className = 'chip chip-ok';
+      chip.innerHTML = '<span class="dot"></span><span>ativo</span>';
+      $('#version').textContent = 'v' + data.version;
     } catch (err) {
-      alert(`Erro: ${err.message}`);
-    } finally {
-      addBtn.disabled = false;
+      chip.className = 'chip chip-err';
+      chip.innerHTML = '<span class="dot"></span><span>offline</span>';
+      $('#version').textContent = err.message;
     }
-  });
-  return el(
-    'div',
-    { className: 'flex items-center justify-between rounded-md border border-slate-200 p-3' },
-    [el('div', {}, [title, meta]), addBtn],
-  );
-}
-
-async function refreshPrinters() {
-  const container = $('#printers');
-  container.innerHTML = '<div class="text-sm text-slate-500">Carregando...</div>';
-  try {
-    const db = await api('GET', '/api/printers');
-    if (!db.printers.length) {
-      container.innerHTML =
-        '<div class="text-sm text-slate-500">Nenhuma impressora cadastrada.</div>';
-      return;
-    }
-    container.innerHTML = '';
-    db.printers.forEach((p) => container.appendChild(renderPrinter(p, db)));
-  } catch (err) {
-    container.innerHTML = `<div class="text-sm text-rose-600">Erro: ${err.message}</div>`;
   }
-}
 
-function renderPrinter(p, db) {
-  const header = el('div', { className: 'flex flex-wrap items-center justify-between gap-3' }, [
-    el('div', {}, [
-      el('div', { className: 'font-semibold' }, p.title),
+  /* ------------------------------------------------------------------ */
+  /* Discovery                                                           */
+  /* ------------------------------------------------------------------ */
+  async function refreshDiscovery() {
+    var container = $('#discovery');
+    container.innerHTML = '';
+    container.appendChild(el('div', { className: 'loading' }, 'Buscando impressoras\u2026'));
+    try {
+      var data = await api('GET', '/api/printers/discover');
+      container.innerHTML = '';
+      if (!data.printers.length) {
+        container.appendChild(
+          el('div', { className: 'empty' }, [
+            el('strong', {}, 'Nenhuma impressora encontrada.'),
+            el(
+              'div',
+              {},
+              'Verifique se ela est\u00e1 instalada em Configura\u00e7\u00f5es \u2192 Impressoras do Windows.',
+            ),
+          ]),
+        );
+        return;
+      }
+      data.printers.forEach(function (p) {
+        container.appendChild(renderDiscovered(p));
+      });
+    } catch (err) {
+      container.innerHTML = '';
+      container.appendChild(el('div', { className: 'error' }, 'Erro: ' + err.message));
+    }
+  }
+
+  function renderDiscovered(p) {
+    var main = el('div', { className: 'discovered-main' }, [
+      el('div', { className: 'discovered-title' }, p.name),
       el(
         'div',
-        { className: 'text-xs text-slate-500' },
-        `${p.type.toUpperCase()} - ${p.type === 'network' ? `${p.ip_address}:${p.port ?? 9100}` : p.path ?? ''}`,
+        { className: 'discovered-meta' },
+        [p.driverName, p.portName, p.status].filter(Boolean).join(' \u00b7 '),
       ),
-    ]),
-    el('div', { className: 'flex flex-wrap items-center gap-2' }, [
-      db.receipt_printer === p.id
-        ? el('span', { className: 'chip chip-ok' }, 'Recibos')
-        : null,
-      db.order_printers.includes(p.id)
-        ? el('span', { className: 'chip chip-ok' }, 'Volumes/Pedidos')
-        : null,
-    ]),
-  ]);
+    ]);
+    var addBtn = el('button', { className: 'btn btn-primary', type: 'button' }, 'Adicionar');
+    addBtn.addEventListener('click', async function () {
+      addBtn.disabled = true;
+      try {
+        await api('POST', '/api/printers', {
+          title: p.name,
+          type: 'windows',
+          path: p.name,
+          char_per_line: 42,
+          driver: 'epson',
+          profile: 'default',
+        });
+        toast(p.name + ' adicionada.', 'ok');
+        refreshPrinters();
+      } catch (err) {
+        toast(err.message, 'err', 'Erro ao adicionar');
+      } finally {
+        addBtn.disabled = false;
+      }
+    });
+    return el('div', { className: 'discovered' }, [main, addBtn]);
+  }
 
-  const btnTest = el('button', { className: 'btn btn-secondary' }, 'Testar impressao');
-  const btnDrawer = el('button', { className: 'btn btn-secondary' }, 'Abrir gaveta');
-  const btnStatus = el('button', { className: 'btn btn-secondary' }, 'Checar conexao');
-  const btnReceipt = el(
-    'button',
-    { className: 'btn btn-primary' },
-    db.receipt_printer === p.id ? 'Padrao de recibos (atual)' : 'Tornar padrao de recibos',
-  );
-  const btnOrder = el(
-    'button',
-    { className: 'btn btn-secondary' },
-    db.order_printers.includes(p.id) ? 'Remover de volumes' : 'Usar para volumes',
-  );
-  const btnDelete = el('button', { className: 'btn btn-danger' }, 'Excluir');
-
-  btnTest.addEventListener('click', () => wrap(btnTest, () => api('POST', `/api/printers/${p.id}/test`)));
-  btnDrawer.addEventListener('click', () =>
-    wrap(btnDrawer, () => api('POST', `/api/printers/${p.id}/drawer`)),
-  );
-  btnStatus.addEventListener('click', async () => {
-    btnStatus.disabled = true;
+  /* ------------------------------------------------------------------ */
+  /* Printers                                                            */
+  /* ------------------------------------------------------------------ */
+  async function refreshPrinters() {
+    var container = $('#printers');
+    container.innerHTML = '';
+    container.appendChild(el('div', { className: 'loading' }, 'Carregando\u2026'));
     try {
-      const res = await api('GET', `/api/printers/${p.id}/status`);
-      alert(res.ok ? 'Impressora online.' : `Offline: ${res.detail || 'sem detalhe'}`);
+      var db = await api('GET', '/api/printers');
+      container.innerHTML = '';
+      if (!db.printers.length) {
+        container.appendChild(
+          el('div', { className: 'empty' }, [
+            el('strong', {}, 'Nenhuma impressora cadastrada.'),
+            el(
+              'div',
+              {},
+              'Adicione uma da lista do Windows acima ou cadastre manualmente por TCP/IP.',
+            ),
+          ]),
+        );
+        return;
+      }
+      db.printers.forEach(function (p) {
+        container.appendChild(renderPrinter(p, db));
+      });
     } catch (err) {
-      alert(`Erro: ${err.message}`);
+      container.innerHTML = '';
+      container.appendChild(el('div', { className: 'error' }, 'Erro: ' + err.message));
+    }
+  }
+
+  function renderPrinter(p, db) {
+    var isReceipt = db.receipt_printer === p.id;
+    var isOrder = db.order_printers.indexOf(p.id) !== -1;
+
+    var chips = el('div', { className: 'row' }, [
+      isReceipt ? el('span', { className: 'chip chip-ok' }, 'Recibos') : null,
+      isOrder ? el('span', { className: 'chip chip-ok' }, 'Volumes/Pedidos') : null,
+    ]);
+
+    var head = el('div', { className: 'printer-head' }, [
+      el('div', {}, [
+        el('div', { className: 'printer-title' }, p.title),
+        el(
+          'div',
+          { className: 'printer-meta' },
+          p.type.toUpperCase() +
+            ' \u00b7 ' +
+            (p.type === 'network'
+              ? p.ip_address + ':' + (p.port != null ? p.port : 9100)
+              : p.path || ''),
+        ),
+      ]),
+      chips,
+    ]);
+
+    var btnTest = el('button', { className: 'btn btn-secondary', type: 'button' }, 'Testar impress\u00e3o');
+    var btnDrawer = el('button', { className: 'btn btn-secondary', type: 'button' }, 'Abrir gaveta');
+    var btnStatus = el('button', { className: 'btn btn-secondary', type: 'button' }, 'Checar conex\u00e3o');
+    var btnReceipt = el(
+      'button',
+      { className: isReceipt ? 'btn btn-secondary' : 'btn btn-primary', type: 'button' },
+      isReceipt ? 'Padr\u00e3o de recibos' : 'Tornar padr\u00e3o de recibos',
+    );
+    if (isReceipt) btnReceipt.disabled = true;
+    var btnOrder = el(
+      'button',
+      { className: 'btn btn-secondary', type: 'button' },
+      isOrder ? 'Remover de volumes' : 'Usar para volumes',
+    );
+    var btnDelete = el('button', { className: 'btn btn-danger', type: 'button' }, 'Excluir');
+
+    btnTest.addEventListener('click', function () {
+      wrap(btnTest, function () {
+        return api('POST', '/api/printers/' + p.id + '/test');
+      }, 'Teste enviado.');
+    });
+    btnDrawer.addEventListener('click', function () {
+      wrap(btnDrawer, function () {
+        return api('POST', '/api/printers/' + p.id + '/drawer');
+      }, 'Comando enviado.');
+    });
+    btnStatus.addEventListener('click', async function () {
+      btnStatus.disabled = true;
+      try {
+        var res = await api('GET', '/api/printers/' + p.id + '/status');
+        if (res.ok) toast('Impressora online.', 'ok', p.title);
+        else toast(res.detail || 'Offline', 'err', p.title);
+      } catch (err) {
+        toast(err.message, 'err');
+      } finally {
+        btnStatus.disabled = false;
+      }
+    });
+    btnReceipt.addEventListener('click', async function () {
+      try {
+        await api('PUT', '/api/assignments', { receipt_printer: p.id });
+        toast(p.title + ' definida como padr\u00e3o de recibos.', 'ok');
+        refreshPrinters();
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+    btnOrder.addEventListener('click', async function () {
+      var next = isOrder
+        ? db.order_printers.filter(function (x) {
+            return x !== p.id;
+          })
+        : db.order_printers.concat([p.id]);
+      try {
+        await api('PUT', '/api/assignments', { order_printers: next });
+        refreshPrinters();
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+    btnDelete.addEventListener('click', async function () {
+      if (!confirm('Excluir "' + p.title + '"? Esta a\u00e7\u00e3o n\u00e3o pode ser desfeita.'))
+        return;
+      try {
+        await api('DELETE', '/api/printers/' + p.id);
+        toast('Impressora removida.', 'ok');
+        refreshPrinters();
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+
+    var actions = el('div', { className: 'printer-actions' }, [
+      btnTest,
+      btnDrawer,
+      btnStatus,
+      btnReceipt,
+      btnOrder,
+      btnDelete,
+    ]);
+
+    return el(
+      'div',
+      { className: 'printer-card' + (isReceipt ? ' is-primary' : '') },
+      [head, actions],
+    );
+  }
+
+  async function wrap(btn, fn, okMessage) {
+    btn.disabled = true;
+    var label = btn.textContent;
+    btn.textContent = 'Aguarde\u2026';
+    try {
+      await fn();
+      btn.textContent = 'OK';
+      if (okMessage) toast(okMessage, 'ok');
+      setTimeout(function () {
+        btn.textContent = label;
+      }, 1500);
+    } catch (err) {
+      toast(err.message, 'err');
+      btn.textContent = label;
     } finally {
-      btnStatus.disabled = false;
+      btn.disabled = false;
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Wiring                                                              */
+  /* ------------------------------------------------------------------ */
+  $('#btn-discover').addEventListener('click', refreshDiscovery);
+
+  $('#btn-restart-spooler').addEventListener('click', async function () {
+    if (!confirm('Reiniciar o Print Spooler do Windows? (requer privil\u00e9gios de admin)'))
+      return;
+    try {
+      var res = await api('POST', '/api/system/restart-spooler');
+      if (res.ok) toast('Spooler reiniciado com sucesso.', 'ok');
+      else toast(res.output || 'Falha ao reiniciar.', 'err');
+    } catch (err) {
+      toast(err.message, 'err');
     }
   });
-  btnReceipt.addEventListener('click', async () => {
-    await api('PUT', '/api/assignments', { receipt_printer: p.id });
-    refreshPrinters();
+
+  $('#form-network').addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var form = new FormData(ev.target);
+    var payload = {
+      title: form.get('title'),
+      type: 'network',
+      ip_address: form.get('ip_address'),
+      port: Number(form.get('port')) || 9100,
+      char_per_line: Number(form.get('char_per_line')) || 42,
+      driver: 'epson',
+      profile: 'default',
+    };
+    try {
+      await api('POST', '/api/printers', payload);
+      ev.target.reset();
+      toast('Impressora adicionada.', 'ok');
+      refreshPrinters();
+    } catch (err) {
+      toast(err.message, 'err');
+    }
   });
-  btnOrder.addEventListener('click', async () => {
-    const next = db.order_printers.includes(p.id)
-      ? db.order_printers.filter((x) => x !== p.id)
-      : [...db.order_printers, p.id];
-    await api('PUT', '/api/assignments', { order_printers: next });
-    refreshPrinters();
-  });
-  btnDelete.addEventListener('click', async () => {
-    if (!confirm(`Excluir ${p.title}?`)) return;
-    await api('DELETE', `/api/printers/${p.id}`);
-    refreshPrinters();
-  });
 
-  const actions = el('div', { className: 'flex flex-wrap gap-2 pt-3' }, [
-    btnTest,
-    btnDrawer,
-    btnStatus,
-    btnReceipt,
-    btnOrder,
-    btnDelete,
-  ]);
-
-  return el('div', { className: 'rounded-md border border-slate-200 p-4' }, [header, actions]);
-}
-
-async function wrap(btn, fn) {
-  btn.disabled = true;
-  const label = btn.textContent;
-  btn.textContent = 'Aguarde...';
-  try {
-    await fn();
-    btn.textContent = 'OK';
-    setTimeout(() => (btn.textContent = label), 1500);
-  } catch (err) {
-    alert(`Erro: ${err.message}`);
-    btn.textContent = label;
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-$('#btn-discover').addEventListener('click', refreshDiscovery);
-$('#btn-restart-spooler').addEventListener('click', async () => {
-  if (!confirm('Reiniciar o Print Spooler do Windows? (requer privilegios de admin)')) return;
-  try {
-    const res = await api('POST', '/api/system/restart-spooler');
-    alert(res.ok ? 'Spooler reiniciado com sucesso.' : `Falhou: ${res.output}`);
-  } catch (err) {
-    alert(`Erro: ${err.message}`);
-  }
-});
-
-$('#form-network').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  const form = new FormData(ev.target);
-  const payload = {
-    title: form.get('title'),
-    type: 'network',
-    ip_address: form.get('ip_address'),
-    port: Number(form.get('port')) || 9100,
-    char_per_line: Number(form.get('char_per_line')) || 42,
-    driver: 'epson',
-    profile: 'default',
-  };
-  try {
-    await api('POST', '/api/printers', payload);
-    ev.target.reset();
-    refreshPrinters();
-  } catch (err) {
-    alert(`Erro: ${err.message}`);
-  }
-});
-
-refreshHealth();
-refreshDiscovery();
-refreshPrinters();
-setInterval(refreshHealth, 5000);
+  refreshHealth();
+  refreshDiscovery();
+  refreshPrinters();
+  setInterval(refreshHealth, 5000);
+})();

@@ -4,6 +4,635 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Esticatroca Print — Admin</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Design tokens --------------------------------------------------- */
+      :root {
+        --c-bg: #f8fafc;
+        --c-surface: #ffffff;
+        --c-border: #e2e8f0;
+        --c-border-strong: #cbd5e1;
+        --c-text: #0f172a;
+        --c-text-muted: #64748b;
+        --c-text-soft: #475569;
+
+        --c-primary: #4f46e5;
+        --c-primary-hover: #4338ca;
+        --c-primary-soft: #eef2ff;
+
+        --c-success: #059669;
+        --c-success-soft: #d1fae5;
+        --c-warn: #d97706;
+        --c-warn-soft: #fef3c7;
+        --c-danger: #e11d48;
+        --c-danger-hover: #be123c;
+        --c-danger-soft: #ffe4e6;
+
+        --radius-sm: 6px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+
+        --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+        --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
+      }
+
+      /* Reset & base --------------------------------------------------- */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100vh;
+        background: var(--c-bg);
+        color: var(--c-text);
+        font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      ul {
+        margin: 0;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        background: #f1f5f9;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 0.85em;
+      }
+      :focus-visible {
+        outline: 2px solid var(--c-primary);
+        outline-offset: 2px;
+      }
+
+      /* Layout --------------------------------------------------------- */
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      header.topbar {
+        background: var(--c-surface);
+        border-bottom: 1px solid var(--c-border);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: var(--shadow-sm);
+      }
+      .topbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 0;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        border-radius: var(--radius-md);
+        background: var(--c-primary);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        box-shadow: var(--shadow-md);
+      }
+      .brand-mark svg {
+        width: 20px;
+        height: 20px;
+      }
+      .brand-title {
+        font-weight: 600;
+        font-size: 15px;
+        line-height: 1.2;
+      }
+      .brand-sub {
+        font-size: 12px;
+        color: var(--c-text-muted);
+      }
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      main {
+        padding: 28px 0 64px;
+        display: grid;
+        gap: 24px;
+      }
+
+      .page-head h1 {
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .page-head p {
+        color: var(--c-text-muted);
+        margin-top: 4px;
+        max-width: 640px;
+      }
+
+      /* Card ----------------------------------------------------------- */
+      .card {
+        background: var(--c-surface);
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        padding: 22px;
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .card-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .card-sub {
+        font-size: 13px;
+        color: var(--c-text-muted);
+        margin-top: 2px;
+      }
+
+      /* Buttons -------------------------------------------------------- */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition:
+          background-color 120ms ease,
+          border-color 120ms ease,
+          color 120ms ease,
+          transform 60ms ease;
+        white-space: nowrap;
+        font-family: inherit;
+      }
+      .btn:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+      .btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .btn svg {
+        width: 15px;
+        height: 15px;
+      }
+      .btn-primary {
+        background: var(--c-primary);
+        color: #fff;
+      }
+      .btn-primary:hover:not(:disabled) {
+        background: var(--c-primary-hover);
+      }
+      .btn-secondary {
+        background: #fff;
+        color: var(--c-text);
+        border-color: var(--c-border-strong);
+      }
+      .btn-secondary:hover:not(:disabled) {
+        background: #f1f5f9;
+      }
+      .btn-warn {
+        background: var(--c-warn-soft);
+        color: #92400e;
+        border-color: #fcd34d;
+      }
+      .btn-warn:hover:not(:disabled) {
+        background: #fde68a;
+      }
+      .btn-danger {
+        background: #fff;
+        color: var(--c-danger);
+        border-color: #fecdd3;
+      }
+      .btn-danger:hover:not(:disabled) {
+        background: var(--c-danger-soft);
+      }
+
+      /* Chips ---------------------------------------------------------- */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 500;
+        background: #f1f5f9;
+        color: var(--c-text-soft);
+        border: 1px solid transparent;
+      }
+      .chip-ok {
+        background: var(--c-success-soft);
+        color: #065f46;
+      }
+      .chip-err {
+        background: var(--c-danger-soft);
+        color: #9f1239;
+      }
+      .chip-warn {
+        background: var(--c-warn-soft);
+        color: #92400e;
+      }
+      .chip .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      /* Forms ---------------------------------------------------------- */
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      @media (min-width: 640px) {
+        .grid-2 {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .field label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--c-text-soft);
+      }
+      .field input,
+      .field select {
+        font: inherit;
+        padding: 8px 10px;
+        border: 1px solid var(--c-border-strong);
+        border-radius: var(--radius-sm);
+        background: #fff;
+        color: var(--c-text);
+        transition: border-color 120ms ease, box-shadow 120ms ease;
+      }
+      .field input:focus,
+      .field select:focus {
+        outline: none;
+        border-color: var(--c-primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+      }
+
+      /* Disclosures ---------------------------------------------------- */
+      details.disclosure {
+        margin-top: 18px;
+        border: 1px dashed var(--c-border-strong);
+        border-radius: var(--radius-md);
+        padding: 14px 16px;
+      }
+      details.disclosure > summary {
+        cursor: pointer;
+        font-weight: 500;
+        color: var(--c-text-soft);
+        list-style: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      details.disclosure > summary::-webkit-details-marker {
+        display: none;
+      }
+      details.disclosure > summary::before {
+        content: '+';
+        display: inline-block;
+        width: 14px;
+        font-weight: 600;
+        color: var(--c-primary);
+      }
+      details.disclosure[open] > summary::before {
+        content: '−';
+      }
+      details.disclosure > form {
+        margin-top: 14px;
+      }
+
+      /* Lists ---------------------------------------------------------- */
+      .list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .grid-cards {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 720px) {
+        .grid-cards {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .discovered {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-md);
+        background: #fff;
+      }
+      .discovered-title {
+        font-weight: 500;
+      }
+      .discovered-meta {
+        font-size: 12px;
+        color: var(--c-text-muted);
+        margin-top: 2px;
+      }
+
+      .printer-card {
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-md);
+        padding: 16px 18px;
+        background: #fff;
+        transition: border-color 120ms ease, box-shadow 120ms ease;
+      }
+      .printer-card:hover {
+        border-color: var(--c-border-strong);
+      }
+      .printer-card.is-primary {
+        border-color: #c7d2fe;
+        background: var(--c-primary-soft);
+      }
+      .printer-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .printer-title {
+        font-weight: 600;
+      }
+      .printer-meta {
+        font-size: 12px;
+        color: var(--c-text-muted);
+        margin-top: 2px;
+      }
+      .printer-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px dashed var(--c-border);
+      }
+
+      /* Empty / loading states ---------------------------------------- */
+      .empty,
+      .loading {
+        padding: 24px 16px;
+        text-align: center;
+        color: var(--c-text-muted);
+        border: 1px dashed var(--c-border-strong);
+        border-radius: var(--radius-md);
+        background: #fcfcfd;
+        font-size: 13px;
+      }
+      .empty strong {
+        color: var(--c-text);
+        font-weight: 600;
+      }
+      .error {
+        padding: 14px 16px;
+        color: #9f1239;
+        background: var(--c-danger-soft);
+        border: 1px solid #fecdd3;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+      }
+
+      /* Help ---------------------------------------------------------- */
+      .help ul {
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+        color: var(--c-text-soft);
+      }
+
+      /* Toasts -------------------------------------------------------- */
+      .toasts {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: grid;
+        gap: 8px;
+        z-index: 50;
+        max-width: min(360px, calc(100vw - 40px));
+      }
+      .toast {
+        background: var(--c-surface);
+        border: 1px solid var(--c-border);
+        border-left: 4px solid var(--c-primary);
+        border-radius: var(--radius-md);
+        padding: 12px 14px;
+        box-shadow: var(--shadow-md);
+        font-size: 13px;
+        color: var(--c-text);
+        animation: toast-in 180ms ease-out;
+      }
+      .toast.ok {
+        border-left-color: var(--c-success);
+      }
+      .toast.err {
+        border-left-color: var(--c-danger);
+      }
+      .toast.warn {
+        border-left-color: var(--c-warn);
+      }
+      .toast-title {
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+      @keyframes toast-in {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M6 4h12v4H6V4Zm-2 6h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2v3H6v-3H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Zm14 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM8 16h8v4H8v-4Z"
+              />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-title">Esticatroca Print</div>
+            <div class="brand-sub" id="version">carregando&hellip;</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span id="health-chip" class="chip" aria-live="polite">
+            <span class="dot"></span><span>verificando&hellip;</span>
+          </span>
+          <button id="btn-restart-spooler" class="btn btn-warn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-3-6.7" />
+              <path d="M21 4v5h-5" />
+            </svg>
+            Reiniciar Spooler
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="page-head">
+        <h1>Impressoras</h1>
+        <p>
+          Gerencie as impressoras t&eacute;rmicas usadas pelo ponto de venda. Para maior
+          estabilidade prefira conex&atilde;o via rede (TCP/IP) quando poss&iacute;vel.
+        </p>
+      </section>
+
+      <!-- Discovery / add -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Impressoras do Windows</div>
+            <div class="card-sub">Detectadas no spooler desta esta&ccedil;&atilde;o.</div>
+          </div>
+          <button id="btn-discover" class="btn btn-secondary" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-3-6.7" />
+              <path d="M21 4v5h-5" />
+            </svg>
+            Atualizar lista
+          </button>
+        </div>
+        <div id="discovery" class="grid-cards"></div>
+
+        <details class="disclosure">
+          <summary>Adicionar impressora de rede (TCP/IP)</summary>
+          <form id="form-network" class="grid-2">
+            <div class="field">
+              <label for="net-title">Nome</label>
+              <input id="net-title" name="title" required placeholder="Bematech MP-100S TH" />
+            </div>
+            <div class="field">
+              <label for="net-ip">IP</label>
+              <input id="net-ip" name="ip_address" required placeholder="192.168.0.50" />
+            </div>
+            <div class="field">
+              <label for="net-port">Porta</label>
+              <input id="net-port" name="port" type="number" value="9100" />
+            </div>
+            <div class="field">
+              <label for="net-cols">Colunas por linha</label>
+              <input id="net-cols" name="char_per_line" type="number" value="42" />
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <button type="submit" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Adicionar
+              </button>
+            </div>
+          </form>
+        </details>
+      </section>
+
+      <!-- Configured printers -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Impressoras configuradas</div>
+            <div class="card-sub">
+              Destacada em azul indica a impressora padr&atilde;o de recibos.
+            </div>
+          </div>
+        </div>
+        <div id="printers" class="list"></div>
+      </section>
+
+      <!-- Help -->
+      <section class="card help">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Dicas r&aacute;pidas</div>
+          </div>
+        </div>
+        <ul>
+          <li>
+            Prefira impressora em <strong>rede (TCP/IP)</strong> em vez de compartilhamento
+            Windows (SMB) &mdash; menos inst&aacute;vel.
+          </li>
+          <li>
+            Se a impressora parar, clique em <strong>Reiniciar Spooler</strong> antes de
+            reiniciar o PC.
+          </li>
+          <li>
+            Logs ficam em <code>logs/print-*.log</code> com rota&ccedil;&atilde;o di&aacute;ria.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <div id="toasts" class="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Esticatroca Print — Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
