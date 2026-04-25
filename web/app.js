@@ -153,12 +153,13 @@
   }
 
   function renderDiscovered(p) {
+    var scope = p.network ? 'Rede' : 'Local';
     var main = el('div', { className: 'discovered-main' }, [
       el('div', { className: 'discovered-title' }, p.name),
       el(
         'div',
         { className: 'discovered-meta' },
-        [p.driverName, p.portName, p.status].filter(Boolean).join(' \u00b7 '),
+        [scope, p.driverName, p.portName, p.status].filter(Boolean).join(' \u00b7 '),
       ),
     ]);
     var addBtn = el('button', { className: 'btn btn-primary', type: 'button' }, 'Adicionar');

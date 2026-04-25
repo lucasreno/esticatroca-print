@@ -11,6 +11,42 @@ export interface DiscoveredPrinter {
   shareName?: string;
   portName?: string;
   driverName?: string;
+  connectionName?: string;
+  computerName?: string;
+  network?: boolean;
+  source?: 'get-printer' | 'wmi';
+}
+
+function toArray<T>(value: unknown): T[] {
+  if (value == null) return [];
+  return Array.isArray(value) ? (value as T[]) : ([value] as T[]);
+}
+
+function looksNetworkPort(portName?: string): boolean {
+  if (!portName) return false;
+  const p = portName.trim().toLowerCase();
+  if (!p) return false;
+  return (
+    p.startsWith('\\\\') ||
+    p.startsWith('ip_') ||
+    p.startsWith('tcp') ||
+    p.startsWith('wsd') ||
+    p.includes(':')
+  );
+}
+
+async function runPowerShellJson(script: string): Promise<unknown | undefined> {
+  const escapedScript = script.replace(/"/g, '\\"');
+  const psCmd = [
+    'powershell.exe',
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    `"${escapedScript}"`,
+  ].join(' ');
+  const { stdout } = await pexec(psCmd, { timeout: 10_000, windowsHide: true });
+  if (!stdout.trim()) return undefined;
+  return JSON.parse(stdout.trim()) as unknown;
 }
 
 /**
@@ -21,24 +57,78 @@ export async function listWindowsPrinters(): Promise<DiscoveredPrinter[]> {
   if (process.platform !== 'win32') return [];
 
   try {
-    const psCmd = [
-      'powershell.exe',
-      '-NoProfile',
-      '-NonInteractive',
-      '-Command',
-      '"Get-Printer | Select-Object Name,PrinterStatus,ShareName,PortName,DriverName | ConvertTo-Json -Compress"',
-    ].join(' ');
-    const { stdout } = await pexec(psCmd, { timeout: 10_000, windowsHide: true });
-    if (!stdout.trim()) return [];
-    const parsed = JSON.parse(stdout.trim()) as unknown;
-    const arr = Array.isArray(parsed) ? parsed : [parsed];
-    return arr.map((p: any) => ({
-      name: String(p.Name),
-      status: p.PrinterStatus != null ? String(p.PrinterStatus) : undefined,
-      shareName: p.ShareName ? String(p.ShareName) : undefined,
-      portName: p.PortName ? String(p.PortName) : undefined,
-      driverName: p.DriverName ? String(p.DriverName) : undefined,
-    }));
+    const getPrinterRaw = await runPowerShellJson(
+      'Get-Printer | Select-Object Name,PrinterStatus,Default,ShareName,PortName,DriverName,Type,ComputerName,ConnectionName | ConvertTo-Json -Compress',
+    );
+    const cimRaw = await runPowerShellJson(
+      'Get-CimInstance Win32_Printer | Select-Object Name,PrinterStatus,Default,ShareName,PortName,DriverName,Network,Local,ServerName,SystemName | ConvertTo-Json -Compress',
+    );
+
+    const merged = new Map<string, DiscoveredPrinter>();
+
+    const upsert = (incoming: DiscoveredPrinter) => {
+      const name = incoming.name?.trim();
+      if (!name) return;
+      const key = name.toLowerCase();
+      const prev = merged.get(key);
+      if (!prev) {
+        merged.set(key, incoming);
+        return;
+      }
+      merged.set(key, {
+        ...prev,
+        ...incoming,
+        // Mantem true se qualquer fonte indicar impressora de rede.
+        network: Boolean(prev.network || incoming.network),
+      });
+    };
+
+    for (const item of toArray<Record<string, unknown>>(getPrinterRaw)) {
+      const name = item.Name != null ? String(item.Name) : '';
+      const portName = item.PortName ? String(item.PortName) : undefined;
+      const connectionName = item.ConnectionName ? String(item.ConnectionName) : undefined;
+      const type = item.Type != null ? String(item.Type).toLowerCase() : '';
+      const network =
+        Boolean(connectionName) ||
+        type.includes('network') ||
+        type.includes('connection') ||
+        looksNetworkPort(portName);
+      upsert({
+        name,
+        status: item.PrinterStatus != null ? String(item.PrinterStatus) : undefined,
+        default: typeof item.Default === 'boolean' ? item.Default : undefined,
+        shareName: item.ShareName ? String(item.ShareName) : undefined,
+        portName,
+        driverName: item.DriverName ? String(item.DriverName) : undefined,
+        computerName: item.ComputerName ? String(item.ComputerName) : undefined,
+        connectionName,
+        network,
+        source: 'get-printer',
+      });
+    }
+
+    for (const item of toArray<Record<string, unknown>>(cimRaw)) {
+      const name = item.Name != null ? String(item.Name) : '';
+      const portName = item.PortName ? String(item.PortName) : undefined;
+      const network =
+        (typeof item.Network === 'boolean' && item.Network) ||
+        (!(typeof item.Local === 'boolean' && item.Local) && looksNetworkPort(portName));
+      upsert({
+        name,
+        status: item.PrinterStatus != null ? String(item.PrinterStatus) : undefined,
+        default: typeof item.Default === 'boolean' ? item.Default : undefined,
+        shareName: item.ShareName ? String(item.ShareName) : undefined,
+        portName,
+        driverName: item.DriverName ? String(item.DriverName) : undefined,
+        computerName: item.SystemName ? String(item.SystemName) : undefined,
+        connectionName: item.ServerName ? String(item.ServerName) : undefined,
+        network,
+        source: 'wmi',
+      });
+    }
+
+    const result = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
+    if (result.length > 0) return result;
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'Falha ao listar impressoras via PowerShell; tentando fallback');
   }
