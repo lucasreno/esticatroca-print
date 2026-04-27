@@ -555,6 +555,37 @@
         <div id="discovery" class="grid-cards"></div>
 
         <details class="disclosure">
+          <summary>Adicionar fila do Windows manualmente</summary>
+          <form id="form-windows" class="grid-2">
+            <div class="field">
+              <label for="win-title">Nome</label>
+              <input id="win-title" name="title" required placeholder="Balcao - Rede" />
+            </div>
+            <div class="field">
+              <label for="win-path">Nome da fila no Windows</label>
+              <input id="win-path" name="path" required placeholder="\\SERVIDOR\IMPRESSORA ou Bematech MP-100S TH" />
+            </div>
+            <div class="field">
+              <label for="win-cols">Colunas por linha</label>
+              <input id="win-cols" name="char_per_line" type="number" value="48" />
+            </div>
+            <div class="field">
+              <label for="win-charset">Code page (acentua&ccedil;&atilde;o)</label>
+              <select id="win-charset" name="character_set" data-charset-select></select>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <button type="submit" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Adicionar
+              </button>
+            </div>
+          </form>
+        </details>
+
+        <details class="disclosure">
           <summary>Adicionar impressora de rede (TCP/IP)</summary>
           <form id="form-network" class="grid-2">
             <div class="field">

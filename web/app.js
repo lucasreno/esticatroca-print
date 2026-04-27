@@ -96,11 +96,13 @@
       console.warn('Falha ao carregar /api/meta', err);
     }
     populateCharsetSelects();
-    // Apply default char_per_line to the network form
-    var colsInput = document.getElementById('net-cols');
-    if (colsInput && !colsInput.dataset.userSet) {
-      colsInput.value = String(meta.default_char_per_line);
-    }
+    // Apply default char_per_line to manual add forms
+    ['win-cols', 'net-cols'].forEach(function (id) {
+      var colsInput = document.getElementById(id);
+      if (colsInput && !colsInput.dataset.userSet) {
+        colsInput.value = String(meta.default_char_per_line);
+      }
+    });
   }
 
   /* ------------------------------------------------------------------ */
@@ -203,7 +205,7 @@
             el(
               'div',
               {},
-              'Adicione uma da lista do Windows acima ou cadastre manualmente por TCP/IP.',
+              'Adicione uma da lista do Windows acima, informe a fila manualmente ou cadastre por TCP/IP.',
             ),
           ]),
         );
@@ -460,6 +462,30 @@
       var res = await api('POST', '/api/system/restart-spooler');
       if (res.ok) toast('Spooler reiniciado com sucesso.', 'ok');
       else toast(res.output || 'Falha ao reiniciar.', 'err');
+    } catch (err) {
+      toast(err.message, 'err');
+    }
+  });
+
+  $('#form-windows').addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var form = new FormData(ev.target);
+    var path = String(form.get('path') || '').trim();
+    var title = String(form.get('title') || '').trim() || path;
+    var payload = {
+      title: title,
+      type: 'windows',
+      path: path,
+      char_per_line: Number(form.get('char_per_line')) || meta.default_char_per_line,
+      character_set: form.get('character_set') || meta.default_character_set,
+      driver: 'epson',
+      profile: 'default',
+    };
+    try {
+      await api('POST', '/api/printers', payload);
+      ev.target.reset();
+      toast('Fila do Windows adicionada.', 'ok');
+      refreshPrinters();
     } catch (err) {
       toast(err.message, 'err');
     }

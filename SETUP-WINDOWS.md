@@ -142,9 +142,10 @@ npm start
 1. Abra `http://localhost:6442/`.
 2. Clique **"Atualizar lista"** para ver as impressoras instaladas no Windows.
 3. Clique **"Adicionar"** na impressora desejada.
-4. **Alternativa TCP/IP**: expanda "Adicionar impressora de rede" e informe IP/porta (padr&atilde;o 9100).
-5. Em "Impressoras configuradas", clique **"Testar impress&atilde;o"**. Deve sair um cupom com cabe&ccedil;alho `== TESTE DE IMPRESSAO ==`.
-6. Marque como **"Padr&atilde;o de recibos"** e (se aplic&aacute;vel) **"Usar para volumes"**.
+4. **Alternativa fila Windows**: se uma impressora de rede instalada no Windows n&atilde;o aparecer, expanda "Adicionar fila do Windows manualmente" e informe o nome exato da fila (ex.: `\\SERVIDOR\IMPRESSORA` ou `Bematech MP-100S TH`).
+5. **Alternativa TCP/IP**: expanda "Adicionar impressora de rede" e informe IP/porta (padr&atilde;o 9100).
+6. Em "Impressoras configuradas", clique **"Testar impress&atilde;o"**. Deve sair um cupom com cabe&ccedil;alho `== TESTE DE IMPRESSAO ==`.
+7. Marque como **"Padr&atilde;o de recibos"** e (se aplic&aacute;vel) **"Usar para volumes"**.
 
 Tudo fica persistido em `data\data.json`.
 
@@ -238,7 +239,7 @@ Restart-Service "Esticatroca Print"
 |---|---|---|
 | `npm ci` falha em `@grandchef/node-printer` | Build tools faltando | Instale VS Build Tools (se&ccedil;&atilde;o 1.3) |
 | `Cannot find module '@mapbox/node-pre-gyp'` ao testar impress&atilde;o | Peer dep oculta do `@grandchef/node-printer` n&atilde;o instalada | `npm install @mapbox/node-pre-gyp --save` na pasta do servi&ccedil;o + `npm run build` |
-| UI abre mas impressora n&atilde;o aparece | Driver n&atilde;o instalado | Instale driver e reinicie o servi&ccedil;o |
+| UI abre mas impressora n&atilde;o aparece | Driver n&atilde;o instalado ou impressora de rede criada s&oacute; no perfil do usu&aacute;rio | Instale driver, reinicie o servi&ccedil;o; se ainda n&atilde;o aparecer, use "Adicionar fila do Windows manualmente" com o nome exato da fila |
 | `Timeout de 15000ms excedido` | Impressora offline/sem papel | Verifique impressora; clique "Reiniciar Spooler" |
 | `EADDRINUSE :6441` | Outro processo usando a porta | Identifique e encerre o processo concorrente |
 | Sem som de impress&atilde;o em cen&aacute;rios antigos | Frontend enviando `type` desconhecido | Ver log; novo tipo precisa ser implementado em `ws-server.ts` |
