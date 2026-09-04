@@ -123,7 +123,7 @@ A verdade &uacute;nica do protocolo &eacute; [src/ws-server.ts](src/ws-server.ts
 2. Se a tarefa mexe no contrato WS &rarr; alterar **em par** com o frontend (mesmo commit l&oacute;gico).
 3. `npm run dev` para iterar; `npm run build` antes de entregar.
 4. Se a mudan&ccedil;a for operacional (servi&ccedil;o Windows, permiss&otilde;es), atualize [SETUP-WINDOWS.md](SETUP-WINDOWS.md).
-5. Anexe ao [../progress.txt](../progress.txt): `YYYY-MM-DD | print-v2 | <resumo>`.
+5. Anexe ao [../progress.txt](../progress.txt): `YYYY-MM-DD | print | <tipo> | <resumo>`.
 
 ## 10. Checklist de entrega
 
